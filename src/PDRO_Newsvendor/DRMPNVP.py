@@ -63,7 +63,7 @@ class DRMPNVP:
             return obj
 
     def nonlinear_part(self, omega, alpha, t):
-        if self.dist == "normal":
+        if self.dist in ["normal", "Normal"]:
             # evaluates the nonlinear part of an objective term
             # i.e.\ the non-linear part for one t.
             mu, sig = omega
@@ -72,6 +72,12 @@ class DRMPNVP:
             return ((self.a[t] * norm.cdf(alpha) - self.h) * alpha * s) + (
                 self.a[t] * norm.pdf(alpha) * s
             )
+            
+        elif self.dist in ["Poisson", "poisson"]:
+            Lam = omega
+            Q = arg
+            return (self.a[t] * Q * poisson.cdf(Q, Lam) 
+                    - Lam * self.a[t] * poisson.cdf(Q - 1, Lam))
 
     def PWL_NLpart(self, omega, alpha, alpha_pts, t):
         ind = [
