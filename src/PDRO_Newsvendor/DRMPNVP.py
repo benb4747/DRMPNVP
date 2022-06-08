@@ -72,7 +72,7 @@ class DRMPNVP:
             return ((self.a[t] * norm.cdf(alpha) - self.h) * alpha * s) + (
                 self.a[t] * norm.pdf(alpha) * s
             )
-            
+
         elif self.dist in ["Poisson", "poisson"]:
             Lam = omega
             Q = arg
@@ -94,7 +94,7 @@ class DRMPNVP:
         )
 
     def PWL_obj(self, q, omega, alpha_pts):
-        if self.dist == "normal":
+        if self.dist in ["normal", "Normal"]:
             mu, sig = omega
             s = [
                 np.sqrt(np.sum([sig[k] ** 2 for k in range(t + 1)]))
@@ -105,6 +105,16 @@ class DRMPNVP:
             ]
             NL_part = [self.nonlinear_part(omega, alpha[t], t) for t in range(self.T)]
             obj = sum([NL_part[t] + self.w[t] * q[t] for t in range(T)])
+            return obj
+        
+        elif self.dist in ["poisson", "Poisson"]:
+            lam = omega
+            Q = [sum([q[k] for k in range(t+1)]) for t in range(self.T)]
+            Lam = [sum([lam[k] for k in range(t+1)]) for t in range(self.T)]
+            NL_part = [self.PWL_NL_part(Lam[t], Q[t], pts[t], t) for t in range(self.T) ]
+            obj = sum( [NL_part[t] + (self.a[t] - self.h) * (Lam[t] - Q[t]) 
+                        + self.w[t] * q[t] - p * lam[t] for t in range(T)] )
+                   
             return obj
 
     def build_model(self, ambiguity_set):
