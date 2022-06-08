@@ -149,7 +149,7 @@ class ambiguity_set:
             self.reduced = reduced
             end = time.perf_counter()
             self.time_taken += end - start
-            
+
         elif self.demand.dist in ["Poisson", "poisson"]:
             # not sure how this will work yet
             reduced = self.confidence_set_full 
@@ -158,7 +158,9 @@ class ambiguity_set:
     def compute_extreme_distributions(self):
         start = time.perf_counter()
         left = self.timeout - self.time_taken
-        if self.demand.dist == "normal":
+        if self.reduced == None:
+            self.reduce()
+        if self.demand.dist in ["normal", "Normal"]:
             M = []
             T = len(self.confidence_set_full[0][0])
             for o in self.confidence_set_full:
@@ -206,6 +208,22 @@ class ambiguity_set:
                     )
                 ]
             self.extreme_distributions = ext_2
+            end = time.perf_counter()
+            self.time_taken += end - start
+            if self.time_taken > self.timeout:
+                self.extreme_distributions = "T.O."
+
+            return
+
+        elif self.demand.dist in ["Poisson", "poisson"]:
+            start = time.perf_counter()
+            lam_max = [max(lam[t] for lam in self.reduced) for t in range(self.demand.T)]
+            lam_min = [min(lam[t] for lam in self.reduced) for t in range(self.demand.T)]
+            
+            self.extreme_distributions = [lam for lam in self.reduced if
+                                         np.any(np.array([lam[t] in [lam_max[t], lam_min[t]] 
+                                                          for t in range(self.demand.T)]))
+                                         ]
             end = time.perf_counter()
             self.time_taken += end - start
             if self.time_taken > self.timeout:
