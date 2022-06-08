@@ -123,31 +123,37 @@ class ambiguity_set:
             self.confidence_set_full.append(tuple(self.demand.mle))
 
     def reduce(self):
-        left = self.timeout - self.time_taken
-        start = time.perf_counter()
-        AS_reduced = self.confidence_set_full.copy()
-        for omega in AS_reduced:
-            if time.perf_counter() - start > left:
-                self.reduced = "T.O."
-                self.time_taken += time.perf_counter() - start
-                return
-            mu, sig = omega
-            same_mu = [o for o in AS_reduced if o[0] == mu]
-            # similar_sig = [o for o in same_mu if np.where(np.array(sig) != np.array(o[1]))[0].shape[0] == 1]
-            for o in same_mu:
-                diff = np.where(np.array(sig) != np.array(o[1]))[0]
-                if diff.shape[0] == 1:
-                    diff_ind = diff[0]
-                    # print(diff_ind)
-                    if sig[diff_ind] >= o[1][diff_ind]:  # o is dominated by omega
-                        AS_reduced.remove(o)
-        reduced = []
-        for o in self.confidence_set_full:
-            if o in AS_reduced:
-                reduced.append(o)
+        if self.demand.dist in ["Normal", "normal"]:
+            left = self.timeout - self.time_taken
+            start = time.perf_counter()
+            AS_reduced = self.confidence_set_full.copy()
+            for omega in AS_reduced:
+                if time.perf_counter() - start > left:
+                    self.reduced = "T.O."
+                    self.time_taken += time.perf_counter() - start
+                    return
+                mu, sig = omega
+                same_mu = [o for o in AS_reduced if o[0] == mu]
+                # similar_sig = [o for o in same_mu if np.where(np.array(sig) != np.array(o[1]))[0].shape[0] == 1]
+                for o in same_mu:
+                    diff = np.where(np.array(sig) != np.array(o[1]))[0]
+                    if diff.shape[0] == 1:
+                        diff_ind = diff[0]
+                        # print(diff_ind)
+                        if sig[diff_ind] >= o[1][diff_ind]:  # o is dominated by omega
+                            AS_reduced.remove(o)
+            reduced = []
+            for o in self.confidence_set_full:
+                if o in AS_reduced:
+                    reduced.append(o)
+            self.reduced = reduced
+            end = time.perf_counter()
+            self.time_taken += end - start
+            
+        elif self.demand.dist in ["Poisson", "poisson"]:
+            # not sure how this will work yet
+            reduced = self.confidence_set_full 
         self.reduced = reduced
-        end = time.perf_counter()
-        self.time_taken += end - start
 
     def compute_extreme_distributions(self):
         start = time.perf_counter()
