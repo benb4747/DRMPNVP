@@ -13,6 +13,7 @@ class ambiguity_set:
         self.n_pts = n_pts
         self.timeout = timeout
         self.time_taken = 0
+        self.reduced = None
 
     def construct_base_set(self):
         if self.demand.dist in ["normal", "Normal"]:
