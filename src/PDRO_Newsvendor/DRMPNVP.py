@@ -222,7 +222,7 @@ class DRMPNVP:
                 )
 
                 var = [q, alpha, dummy, NL_part]
-`
+                
         elif self.dist in ["Poisson", "poisson"]:
             Q = m.addVars(range(self.T))
             m.addConstrs(Q[t] == gp.quicksum(q[k] for k in range(t+1))
