@@ -51,15 +51,18 @@ class DRMPNVP:
 
         elif self.dist in ["Poisson", "poisson"]:
             lam = omega
-            Q = [sum(q[:t+1]) for t in range(self.T)]
-            Lam = [sum(lam[:t+1]) for t in range(self.T)]
-            obj = sum([
-                Q[t] * self.a[t] * poisson.cdf(Q[t], Lam[t]) 
-                - Lam[t] * self.a[t] * poisson.cdf(Q[t] - 1, Lam[t])
-                + (self.b + self.p * int(t == self.T - 1)) * (Lam[t] - Q[t]) 
-                + q[t] * self.w[t] - self.p * lam[t] 
-                for t in range(self.T)
-            ])
+            Q = [sum(q[: t + 1]) for t in range(self.T)]
+            Lam = [sum(lam[: t + 1]) for t in range(self.T)]
+            obj = sum(
+                [
+                    Q[t] * self.a[t] * poisson.cdf(Q[t], Lam[t])
+                    - Lam[t] * self.a[t] * poisson.cdf(Q[t] - 1, Lam[t])
+                    + (self.b + self.p * int(t == self.T - 1)) * (Lam[t] - Q[t])
+                    + q[t] * self.w[t]
+                    - self.p * lam[t]
+                    for t in range(self.T)
+                ]
+            )
             return obj
 
     def nonlinear_part(self, omega, alpha, t):
@@ -76,8 +79,9 @@ class DRMPNVP:
         elif self.dist in ["Poisson", "poisson"]:
             Lam = omega
             Q = alpha
-            return (self.a[t] * Q * poisson.cdf(Q, Lam) 
-                    - Lam * self.a[t] * poisson.cdf(Q - 1, Lam))
+            return self.a[t] * Q * poisson.cdf(Q, Lam) - Lam * self.a[t] * poisson.cdf(
+                Q - 1, Lam
+            )
 
     def PWL_NLpart(self, omega, alpha, alpha_pts, t):
         ind = [
@@ -103,18 +107,29 @@ class DRMPNVP:
             alpha = [
                 sum([mu[k] - q[k] for k in range(t + 1)]) / s[t] for t in range(self.T)
             ]
-            PWL_NL_part = [self.PWL_NLpart(omega, alpha[t], alpha_pts, t) for t in range(self.T)]
+            PWL_NL_part = [
+                self.PWL_NLpart(omega, alpha[t], alpha_pts, t) for t in range(self.T)
+            ]
             obj = sum([PWL_NL_part[t] + self.w[t] * q[t] for t in range(self.T)])
             return obj
-        
+
         elif self.dist in ["poisson", "Poisson"]:
             lam = omega
-            Q = [sum([q[k] for k in range(t+1)]) for t in range(self.T)]
-            Lam = [sum([lam[k] for k in range(t+1)]) for t in range(self.T)]
-            NL_part = [self.PWL_NLpart(Lam[t], Q[t], alpha_pts[t], t) for t in range(self.T) ]
-            obj = sum( [NL_part[t] + (self.a[t] - self.h) * (Lam[t] - Q[t]) 
-                        + self.w[t] * q[t] - self.p * lam[t] for t in range(self.T)] )
-                   
+            Q = [sum([q[k] for k in range(t + 1)]) for t in range(self.T)]
+            Lam = [sum([lam[k] for k in range(t + 1)]) for t in range(self.T)]
+            NL_part = [
+                self.PWL_NLpart(Lam[t], Q[t], alpha_pts[t], t) for t in range(self.T)
+            ]
+            obj = sum(
+                [
+                    NL_part[t]
+                    + (self.a[t] - self.h) * (Lam[t] - Q[t])
+                    + self.w[t] * q[t]
+                    - self.p * lam[t]
+                    for t in range(self.T)
+                ]
+            )
+
             return obj
 
     def build_model(self, ambiguity_set):
@@ -223,11 +238,14 @@ class DRMPNVP:
 
         elif self.dist in ["Poisson", "poisson"]:
             Q = m.addVars(range(self.T))
-            m.addConstrs(Q[t] == gp.quicksum(q[k] for k in range(t+1))
-                        for t in range(self.T))
-            
-            Q_pts = [np.arange(0, sum([self.W / self.w[k] for k in range(t+1)]), self.gap)
-                    for t in range(self.T)]
+            m.addConstrs(
+                Q[t] == gp.quicksum(q[k] for k in range(t + 1)) for t in range(self.T)
+            )
+
+            Q_pts = [
+                np.arange(0, sum([self.W / self.w[k] for k in range(t + 1)]), self.gap)
+                for t in range(self.T)
+            ]
             for i in range(len(ambiguity_set)):
                 tt = time.perf_counter() - start
                 if tt >= self.timeout:
@@ -236,17 +254,36 @@ class DRMPNVP:
                     worst = tuple([tuple(self.T * [-1]), tuple(self.T * [-1])])
                     obj = 0
                     del m
-                    return [np.round(q_sol, 3), worst, np.round(obj,3), np.round(tt, 3), TO]
-                
+                    return [
+                        np.round(q_sol, 3),
+                        worst,
+                        np.round(obj, 3),
+                        np.round(tt, 3),
+                        TO,
+                    ]
+
                 lam = ambiguity_set[i]
-                Lam = [sum(lam[:t+1]) for t in range(self.T)]
+                Lam = [sum(lam[: t + 1]) for t in range(self.T)]
                 for t in range(self.T):
                     NL_pts = [self.nonlinear_part(Lam[t], Q_, t) for Q_ in Q_pts[t]]
-                    m.addGenConstrPWL(Q[t], NL_part[i, t], Q_pts[t], NL_pts, "NLconstr_(%s,%s)" %(i,t))
+                    m.addGenConstrPWL(
+                        Q[t],
+                        NL_part[i, t],
+                        Q_pts[t],
+                        NL_pts,
+                        "NLconstr_(%s,%s)" % (i, t),
+                    )
 
-                m.addConstr(dummy >= gp.quicksum(NL_part[i, t] + (self.a[t] - self.h) * (Lam[t] - Q[t])
-                                                + q[t] * self.w[t] - self.p * lam[t] 
-                                                for t in range(self.T)))
+                m.addConstr(
+                    dummy
+                    >= gp.quicksum(
+                        NL_part[i, t]
+                        + (self.a[t] - self.h) * (Lam[t] - Q[t])
+                        + q[t] * self.w[t]
+                        - self.p * lam[t]
+                        for t in range(self.T)
+                    )
+                )
                 var = [q, Q, dummy, NL_part]
 
         m.addConstr(gp.quicksum(self.w[t] * q[t] for t in range(self.T)) <= self.W)

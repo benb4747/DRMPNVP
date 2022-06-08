@@ -108,7 +108,7 @@ class MPNVP(DRMPNVP):
             w = np.array(self.w, dtype="float")
             days = [i for i in range(self.T) if i not in self.zero_days]
             days = np.array(days, dtype="int")
-            l = self.omega # lambda
+            l = self.omega  # lambda
 
             n = len(days)
             sol = np.zeros(self.T)
@@ -117,12 +117,7 @@ class MPNVP(DRMPNVP):
                 pr = (
                     Decimal(self.b) - Decimal(1 + lam) * Decimal(self.w[0] - self.w[1])
                 ) / Decimal(self.h + self.b)
-                sol[0] = Decimal(
-                    poisson.ppf(
-                        q=np.float64(pr),
-                        mu=l[0]
-                    )
-                )
+                sol[0] = Decimal(poisson.ppf(q=np.float64(pr), mu=l[0]))
                 if not np.isfinite(sol[0]):
                     return sol
             for t in range(1, self.T - 1):
@@ -133,13 +128,9 @@ class MPNVP(DRMPNVP):
                         - Decimal(1 + lam) * Decimal(self.w[t] - self.w[t + 1])
                     ) / Decimal(self.h + self.b)
 
-                    sol[t] = (Decimal(
-                        norm.ppf(
-                            q=np.float64(pr),
-                            mu=sum(l[: t + 1])
-                            )
-                        )
-                     - Decimal(sum(sol[:t])))
+                    sol[t] = Decimal(
+                        norm.ppf(q=np.float64(pr), mu=sum(l[: t + 1]))
+                    ) - Decimal(sum(sol[:t]))
                     if not np.isfinite(sol[t]):
                         return sol
                     # print(Decimal(sum(sol[:t])))
@@ -152,12 +143,7 @@ class MPNVP(DRMPNVP):
                     + Decimal(self.p)
                 ) / Decimal(self.h + self.b + self.p)
                 sol[self.T - 1] = (
-                    Decimal(
-                        poisson.ppf(
-                            q=np.float64(pr),
-                            mu=sum(l)
-                        )
-                    )
+                    Decimal(poisson.ppf(q=np.float64(pr), mu=sum(l)))
                     # - int(sol[- 2] > 0) * norm.ppf(q=(b - (1 + lam) *(w[days[-2]] - w[days[-1]])) / (h + b),
                     # loc=sum(mu[:days[n-1]]), scale=np.sqrt(sum(var[:days[n-1]]))
                     - Decimal(sum(sol[:-1]))

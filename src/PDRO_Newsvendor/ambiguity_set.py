@@ -40,7 +40,8 @@ class ambiguity_set:
 
             mu_CIs_disc = [
                 [
-                    mu_CIs[t][0] + (j / (self.n_pts - 1)) * (mu_CIs[t][1] - mu_CIs[t][0])
+                    mu_CIs[t][0]
+                    + (j / (self.n_pts - 1)) * (mu_CIs[t][1] - mu_CIs[t][0])
                     for j in range(self.n_pts)
                 ]
                 for t in range(self.demand.T)
@@ -48,7 +49,8 @@ class ambiguity_set:
 
             sig_CIs_disc = [
                 [
-                    sig_CIs[t][0] + (j / (self.n_pts - 1)) * (sig_CIs[t][1] - sig_CIs[t][0])
+                    sig_CIs[t][0]
+                    + (j / (self.n_pts - 1)) * (sig_CIs[t][1] - sig_CIs[t][0])
                     for j in range(self.n_pts)
                 ]
                 for t in range(self.demand.T)
@@ -63,15 +65,24 @@ class ambiguity_set:
         elif self.demand.dist in ["Poisson", "poisson"]:
             start = time.perf_counter()
             lam_0 = self.demand.omega_0
-            z = norm.ppf(1 - self.alpha/2)
+            z = norm.ppf(1 - self.alpha / 2)
             N = self.demand.N
             lam_hat = self.demand.mle
-            CIs = [(lam_hat[t] - z * (lam_hat[t] / np.sqrt(N)), lam_hat[t] + z * (lam_hat[t] / np.sqrt(N)))
-                      for t in range(self.demand.T)]
+            CIs = [
+                (
+                    lam_hat[t] - z * (lam_hat[t] / np.sqrt(N)),
+                    lam_hat[t] + z * (lam_hat[t] / np.sqrt(N)),
+                )
+                for t in range(self.demand.T)
+            ]
 
-            CIs_disc = [[CIs[t][0] + (j / (self.n_pts - 1)) * (CIs[t][1] - CIs[t][0]) 
-                         for j in range(self.n_pts)]
-                        for t in range(self.demand.T)]
+            CIs_disc = [
+                [
+                    CIs[t][0] + (j / (self.n_pts - 1)) * (CIs[t][1] - CIs[t][0])
+                    for j in range(self.n_pts)
+                ]
+                for t in range(self.demand.T)
+            ]
 
             Omega = list(it.product(*CIs_disc))
             end = time.perf_counter()
@@ -91,7 +102,9 @@ class ambiguity_set:
                 confset = []
                 for omega in self.base_set:
                     if (
-                        norm_conf_val(self.demand.N, self.demand.T, omega, self.demand.mle)
+                        norm_conf_val(
+                            self.demand.N, self.demand.T, omega, self.demand.mle
+                        )
                         <= chi
                     ):
                         confset.append(omega)
@@ -153,7 +166,7 @@ class ambiguity_set:
 
         elif self.demand.dist in ["Poisson", "poisson"]:
             # not sure how this will work yet
-            reduced = self.confidence_set_full 
+            reduced = self.confidence_set_full
         self.reduced = reduced
 
     def compute_extreme_distributions(self):
@@ -218,13 +231,25 @@ class ambiguity_set:
 
         elif self.demand.dist in ["Poisson", "poisson"]:
             start = time.perf_counter()
-            lam_max = [max(lam[t] for lam in self.reduced) for t in range(self.demand.T)]
-            lam_min = [min(lam[t] for lam in self.reduced) for t in range(self.demand.T)]
-            
-            self.extreme_distributions = [lam for lam in self.reduced if
-                                         np.any(np.array([lam[t] in [lam_max[t], lam_min[t]] 
-                                                          for t in range(self.demand.T)]))
-                                         ]
+            lam_max = [
+                max(lam[t] for lam in self.reduced) for t in range(self.demand.T)
+            ]
+            lam_min = [
+                min(lam[t] for lam in self.reduced) for t in range(self.demand.T)
+            ]
+
+            self.extreme_distributions = [
+                lam
+                for lam in self.reduced
+                if np.any(
+                    np.array(
+                        [
+                            lam[t] in [lam_max[t], lam_min[t]]
+                            for t in range(self.demand.T)
+                        ]
+                    )
+                )
+            ]
             end = time.perf_counter()
             self.time_taken += end - start
             if self.time_taken > self.timeout:

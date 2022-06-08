@@ -21,13 +21,12 @@ class demand_RV:
             samples = np.random.multivariate_normal(mean=mu, cov=Sig, size=self.N)
             mu_MLE = [np.mean(samples[:, t]) for t in range(self.T)]
 
-            sig_MLE = [np.mean((samples[:, t] - mu_MLE[t])**2)
-                       for t in range(self.T)]
+            sig_MLE = [np.mean((samples[:, t] - mu_MLE[t]) ** 2) for t in range(self.T)]
 
-            self.mle = ((mu_MLE, sig_MLE))
+            self.mle = (mu_MLE, sig_MLE)
         elif self.dist == "poisson" or self.dist == "Poisson":
             lam = self.omega_0
             np.random.seed(self.seed)
             samples = np.random.poisson(lam=lam, size=(self.N, self.T))
-            
+
             self.mle = tuple([np.mean(samples[:, t]) for t in range(self.T)])
