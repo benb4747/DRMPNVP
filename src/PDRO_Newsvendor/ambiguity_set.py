@@ -15,48 +15,66 @@ class ambiguity_set:
         self.time_taken = 0
 
     def construct_base_set(self):
-        start = time.perf_counter()
-        omega_0 = self.demand.omega_0
-        z = norm.ppf(1 - self.alpha / 2)
-        N = self.demand.N
-        omega_hat = self.demand.mle
-        mu_hat, sig_hat = omega_hat
-        mu_CIs = [
-            (
-                mu_hat[t] - z * (sig_hat[t] / np.sqrt(N)),
-                mu_hat[t] + z * (sig_hat[t] / np.sqrt(N)),
-            )
-            for t in range(self.demand.T)
-        ]
-        sig_CIs = [
-            (
-                sig_hat[t] - z * (sig_hat[t] / np.sqrt(2 * N)),
-                sig_hat[t] + z * (sig_hat[t] / np.sqrt(2 * N)),
-            )
-            for t in range(self.demand.T)
-        ]
-
-        mu_CIs_disc = [
-            [
-                mu_CIs[t][0] + (j / (self.n_pts - 1)) * (mu_CIs[t][1] - mu_CIs[t][0])
-                for j in range(self.n_pts)
+        if self.demand.dist in ["normal", "Normal"]:
+            start = time.perf_counter()
+            omega_0 = self.demand.omega_0
+            z = norm.ppf(1 - self.alpha / 2)
+            N = self.demand.N
+            omega_hat = self.demand.mle
+            mu_hat, sig_hat = omega_hat
+            mu_CIs = [
+                (
+                    mu_hat[t] - z * (sig_hat[t] / np.sqrt(N)),
+                    mu_hat[t] + z * (sig_hat[t] / np.sqrt(N)),
+                )
+                for t in range(self.demand.T)
             ]
-            for t in range(self.demand.T)
-        ]
-
-        sig_CIs_disc = [
-            [
-                sig_CIs[t][0] + (j / (self.n_pts - 1)) * (sig_CIs[t][1] - sig_CIs[t][0])
-                for j in range(self.n_pts)
+            sig_CIs = [
+                (
+                    sig_hat[t] - z * (sig_hat[t] / np.sqrt(2 * N)),
+                    sig_hat[t] + z * (sig_hat[t] / np.sqrt(2 * N)),
+                )
+                for t in range(self.demand.T)
             ]
-            for t in range(self.demand.T)
-        ]
 
-        mu_vals = list(it.product(*mu_CIs_disc))
-        sig_vals = list(it.product(*sig_CIs_disc))
+            mu_CIs_disc = [
+                [
+                    mu_CIs[t][0] + (j / (self.n_pts - 1)) * (mu_CIs[t][1] - mu_CIs[t][0])
+                    for j in range(self.n_pts)
+                ]
+                for t in range(self.demand.T)
+            ]
 
-        Omega = [(mu, sig) for mu in mu_vals for sig in sig_vals]
-        end = time.perf_counter()
+            sig_CIs_disc = [
+                [
+                    sig_CIs[t][0] + (j / (self.n_pts - 1)) * (sig_CIs[t][1] - sig_CIs[t][0])
+                    for j in range(self.n_pts)
+                ]
+                for t in range(self.demand.T)
+            ]
+
+            mu_vals = list(it.product(*mu_CIs_disc))
+            sig_vals = list(it.product(*sig_CIs_disc))
+
+            Omega = [(mu, sig) for mu in mu_vals for sig in sig_vals]
+            end = time.perf_counter()
+
+        elif self.demand.dist in ["Poisson", "poisson"]:
+            start = time.perf_counter()
+            lam_0 = self.demand.omega_0
+            z = norm.ppf(1 - self.alpha/2)
+            N = self.demand.N
+            lam_hat = self.demand.mle
+            CIs = [(lam_hat[t] - z * (lam_hat[t] / np.sqrt(N)), lam_hat[t] + z * (lam_hat[t] / np.sqrt(N)))
+                      for t in range(self.demand.T)]
+
+            CIs_disc = [[CIs[t][0] + (j / (self.n_pts - 1)) * (CIs[t][1] - CIs[t][0]) 
+                         for j in range(self.n_pts)]
+                        for t in range(self.demand.T)]
+
+            Omega = list(it.product(*CIs_disc))
+            end = time.perf_counter()
+            
         self.time_taken = end - start
         if self.time_taken > self.timeout:
             self.base_set = "T.O."
