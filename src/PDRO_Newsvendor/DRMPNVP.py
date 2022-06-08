@@ -131,7 +131,7 @@ class DRMPNVP:
         q = m.addVars([t for t in range(self.T)], vtype=GRB.CONTINUOUS, name="q")
         dummy = m.addVar(vtype=GRB.CONTINUOUS, name="dummy", lb=-GRB.INFINITY)
         enable_print()
-        if self.dist == "normal":
+        if self.dist in ["normal", "Normal"]:
             alpha = m.addVars(
                 [(i, t) for i in range(len(ambiguity_set)) for t in range(self.T)],
                 vtype=GRB.CONTINUOUS,
@@ -221,12 +221,41 @@ class DRMPNVP:
                     )
                 )
 
+                var = [q, alpha, dummy, NL_part]
+
+            elif self.dist in ["Poisson", "poisson"]:
+                Q = m.addVars(range(self.T))
+                m.addConstrs(Q[t] == gp.quicksum(q[k] for k in range(t+1))
+                            for t in range(self.T))
+                
+                Q_pts = [np.arange(0, sum([W / w[k] for k in range(t+1)]), self.gap)
+                        for t in range(self.T)]
+                for i in range(len(ambiguity_set)):
+                    tt = time.perf_counter() - start
+                    if tt >= self.timeout:
+                        TO = True
+                        q_sol = tuple(self.T * [-1])
+                        worst = tuple([tuple(self.T * [-1]), tuple(self.T * [-1])])
+                        obj = 0
+                        del m
+                        return [np.round(q_sol, 3), worst, np.round(obj,3), np.round(tt, 3), TO]
+                    
+                    lam = ambiguity_set[i]
+                    Lam = [sum(lam[:t+1]) for t in range(self.T)]
+                    for t in range(self.T):
+                        NL_pts = [self.nonlinear_part(Lam[t], Q_, t) for Q_ in Q_pts[t]]
+                        m.addGenConstrPWL(Q[t], NL_part[i, t], Q_pts[t], NL_pts, "NLconstr_(%s,%s)" %(i,t))
+
+                    m.addConstr(dummy >= gp.quicksum(NL_part[i, t] + (self.a[t] - self.h) * (Lam[t] - Q[t])
+                                                    + q[t] * self.w[t] - self.p * lam[t] 
+                                                    for t in range(self.T)))
+                    var = [q, Q, dummy, NL_part]
+
         m.addConstr(gp.quicksum(self.w[t] * q[t] for t in range(self.T)) <= self.W)
         m.setObjective(dummy, GRB.MINIMIZE)
         end = time.perf_counter()
         # print("model built in %s seconds." %np.round(end-start, 3))
 
-        var = [q, alpha, dummy, NL_part]
         t_build = end - start
         return [m, var, t_build, TO]
 
