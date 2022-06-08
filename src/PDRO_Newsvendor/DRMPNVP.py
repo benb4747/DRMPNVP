@@ -24,7 +24,7 @@ class DRMPNVP:
         self.a = [self.h + self.b + self.p * (t == (self.T - 1)) for t in range(self.T)]
 
     def cost_function(self, q, omega):
-        if self.dist == "normal":
+        if self.dist in ["normal", "Normal"]:
             mu, sig = omega
             s = [
                 np.sqrt(np.sum([sig[k] ** 2 for k in range(t + 1)]))
@@ -47,6 +47,19 @@ class DRMPNVP:
                     for t in range(self.T)
                 ]
             )
+            return obj
+
+        elif self.dist in ["Poisson", "poisson"]:
+            lam = omega
+            Q = [sum(q[:t+1]) for t in range(self.T)]
+            Lam = [sum(lam[:t+1]) for t in range(self.T)]
+            obj = sum([
+                Q[t] * self.a[t] * poisson.cdf(Q[t], Lam[t]) 
+                - Lam[t] * self.a[t] * poisson.cdf(Q[t] - 1, Lam[t])
+                + (self.b + self.p * int(t == self.T - 1)) * (Lam[t] - Q[t]) 
+                + q[t] * self.w[t] - self.p * lam[t] 
+                for t in range(self.T)
+            ])
             return obj
 
     def nonlinear_part(self, omega, alpha, t):
