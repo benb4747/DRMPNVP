@@ -4,7 +4,7 @@ from ambiguity_set import *
 from DRMPNVP import *
 
 import numpy as np
-from decimal import Decimal
+from decimal import Decimal, getcontext
 from scipy.stats import norm, poisson
 from math import log, exp
 
