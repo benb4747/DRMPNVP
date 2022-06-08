@@ -74,7 +74,7 @@ class ambiguity_set:
 
             Omega = list(it.product(*CIs_disc))
             end = time.perf_counter()
-            
+
         self.time_taken = end - start
         if self.time_taken > self.timeout:
             self.base_set = "T.O."
@@ -84,12 +84,30 @@ class ambiguity_set:
     def construct_confidence_set(self):
         left = self.timeout - self.time_taken
         start = time.perf_counter()
-        if self.demand.dist == "normal":
+        if self.demand.dist in ["Normal", "normal"]:
+            if self.demand.dist == "normal":
+                chi = chi2.ppf(q=1 - self.alpha, df=2 * self.demand.T)
+                confset = []
+                for omega in self.base_set:
+                    if (
+                        norm_conf_val(self.demand.N, self.demand.T, omega, self.demand.mle)
+                        <= chi
+                    ):
+                        confset.append(omega)
+                    tt = time.perf_counter() - start
+                    if tt > left:
+                        self.confidence_set_full = "T.O."
+                        return
+
+                self.confidence_set_full = confset
+                self.time_taken += time.perf_counter() - start
+
+        if self.demand.dist in ["Poisson", "poisson"]:
             chi = chi2.ppf(q=1 - self.alpha, df=2 * self.demand.T)
             confset = []
-            for omega in self.base_set:
+            for lam in self.base_set:
                 if (
-                    norm_conf_val(self.demand.N, self.demand.T, omega, self.demand.mle)
+                    pois_conf_val(self.demand.N, self.demand.T, lam, self.demand.mle)
                     <= chi
                 ):
                     confset.append(omega)
