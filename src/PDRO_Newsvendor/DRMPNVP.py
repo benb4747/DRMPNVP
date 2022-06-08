@@ -130,18 +130,18 @@ class DRMPNVP:
         m = gp.Model(name="MPNVP_%s_day" % self.T, env=env)
         q = m.addVars([t for t in range(self.T)], vtype=GRB.CONTINUOUS, name="q")
         dummy = m.addVar(vtype=GRB.CONTINUOUS, name="dummy", lb=-GRB.INFINITY)
+        NL_part = m.addVars(
+            [(i, t) for i in range(len(ambiguity_set)) for t in range(self.T)],
+            vtype=GRB.CONTINUOUS,
+            name="NL_part",
+            lb=-GRB.INFINITY,
+        )
         enable_print()
         if self.dist in ["normal", "Normal"]:
             alpha = m.addVars(
                 [(i, t) for i in range(len(ambiguity_set)) for t in range(self.T)],
                 vtype=GRB.CONTINUOUS,
                 name="alpha",
-                lb=-GRB.INFINITY,
-            )
-            NL_part = m.addVars(
-                [(i, t) for i in range(len(ambiguity_set)) for t in range(self.T)],
-                vtype=GRB.CONTINUOUS,
-                name="NL_part",
                 lb=-GRB.INFINITY,
             )
 
@@ -205,8 +205,6 @@ class DRMPNVP:
                         NL_pts,
                         "NLconstr_(%s,%s)" % (i, t),
                     )
-                    # NL_pts = [nonlinear_part(alpha, t, mu, sig, T, W, w, p, h, b) for alpha in alpha_pts]
-                    # m.addGenConstrPWL(alpha[i, t], NL_part[i, t], alpha_pts, NL_pts, "NLconstr_(%s,%s)" %(i,t))
                     m.addConstr(
                         alpha[i, t]
                         == gp.quicksum(mu[k] - q[k] for k in range(t + 1)) / s[t],

@@ -111,7 +111,7 @@ class ambiguity_set:
                     pois_conf_val(self.demand.N, self.demand.T, lam, self.demand.mle)
                     <= chi
                 ):
-                    confset.append(omega)
+                    confset.append(lam)
                 tt = time.perf_counter() - start
                 if tt > left:
                     self.confidence_set_full = "T.O."
