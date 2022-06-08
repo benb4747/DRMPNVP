@@ -2,7 +2,7 @@ from functions import *
 from demand_RV import *
 from ambiguity_set import *
 import numpy as np
-from scipy.stats import chi2, norm
+from scipy.stats import chi2, norm, poisson
 import gurobipy as gp
 from gurobipy import GRB
 import time
@@ -75,7 +75,7 @@ class DRMPNVP:
 
         elif self.dist in ["Poisson", "poisson"]:
             Lam = omega
-            Q = arg
+            Q = alpha
             return (self.a[t] * Q * poisson.cdf(Q, Lam) 
                     - Lam * self.a[t] * poisson.cdf(Q - 1, Lam))
 
@@ -103,17 +103,17 @@ class DRMPNVP:
             alpha = [
                 sum([mu[k] - q[k] for k in range(t + 1)]) / s[t] for t in range(self.T)
             ]
-            NL_part = [self.nonlinear_part(omega, alpha[t], t) for t in range(self.T)]
-            obj = sum([NL_part[t] + self.w[t] * q[t] for t in range(T)])
+            PWL_NL_part = [self.PWL_NLpart(omega, alpha[t], alpha_pts, t) for t in range(self.T)]
+            obj = sum([PWL_NL_part[t] + self.w[t] * q[t] for t in range(self.T)])
             return obj
         
         elif self.dist in ["poisson", "Poisson"]:
             lam = omega
             Q = [sum([q[k] for k in range(t+1)]) for t in range(self.T)]
             Lam = [sum([lam[k] for k in range(t+1)]) for t in range(self.T)]
-            NL_part = [self.PWL_NL_part(Lam[t], Q[t], pts[t], t) for t in range(self.T) ]
+            NL_part = [self.PWL_NLpart(Lam[t], Q[t], alpha_pts[t], t) for t in range(self.T) ]
             obj = sum( [NL_part[t] + (self.a[t] - self.h) * (Lam[t] - Q[t]) 
-                        + self.w[t] * q[t] - p * lam[t] for t in range(T)] )
+                        + self.w[t] * q[t] - self.p * lam[t] for t in range(self.T)] )
                    
             return obj
 
@@ -222,13 +222,13 @@ class DRMPNVP:
                 )
 
                 var = [q, alpha, dummy, NL_part]
-                
+
         elif self.dist in ["Poisson", "poisson"]:
             Q = m.addVars(range(self.T))
             m.addConstrs(Q[t] == gp.quicksum(q[k] for k in range(t+1))
                         for t in range(self.T))
             
-            Q_pts = [np.arange(0, sum([W / w[k] for k in range(t+1)]), self.gap)
+            Q_pts = [np.arange(0, sum([self.W / self.w[k] for k in range(t+1)]), self.gap)
                     for t in range(self.T)]
             for i in range(len(ambiguity_set)):
                 tt = time.perf_counter() - start
@@ -271,7 +271,7 @@ class DRMPNVP:
             end = time.perf_counter()
             tt = np.round(t_build + end - start, 3)
             del m
-            return [q_sol, obj, worst, tt, TO]`
+            return [q_sol, obj, worst, tt, TO]
 
         tt = t_build + time.perf_counter() - start
         m.Params.TimeLimit = self.timeout - tt
