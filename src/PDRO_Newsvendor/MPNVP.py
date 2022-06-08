@@ -133,13 +133,13 @@ class MPNVP(DRMPNVP):
                         - Decimal(1 + lam) * Decimal(self.w[t] - self.w[t + 1])
                     ) / Decimal(self.h + self.b)
 
-                    sol[t] = Decimal(
+                    sol[t] = (Decimal(
                         norm.ppf(
                             q=np.float64(pr),
                             mu=sum(l[: t + 1])
                             )
                         )
-                    ) - Decimal(sum(sol[:t]))
+                     - Decimal(sum(sol[:t])))
                     if not np.isfinite(sol[t]):
                         return sol
                     # print(Decimal(sum(sol[:t])))
