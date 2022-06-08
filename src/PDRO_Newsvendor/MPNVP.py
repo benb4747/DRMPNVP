@@ -5,7 +5,7 @@ from DRMPNVP import *
 
 import numpy as np
 from decimal import Decimal
-from scipy.stats import norm
+from scipy.stats import norm, poisson
 from math import log, exp
 
 
@@ -41,7 +41,7 @@ class MPNVP(DRMPNVP):
         self.omega = omega
 
     def KKT_solution(self, lam):
-        if self.dist == "normal":
+        if self.dist in ["normal", "Normal"]:
             w = np.array(self.w, dtype="float")
             days = [i for i in range(self.T) if i not in self.zero_days]
             days = np.array(days, dtype="int")
@@ -95,6 +95,67 @@ class MPNVP(DRMPNVP):
                             q=np.float64(pr),
                             loc=sum(mu),
                             scale=np.float64(Decimal(np.sqrt(sum(var)))),
+                        )
+                    )
+                    # - int(sol[- 2] > 0) * norm.ppf(q=(b - (1 + lam) *(w[days[-2]] - w[days[-1]])) / (h + b),
+                    # loc=sum(mu[:days[n-1]]), scale=np.sqrt(sum(var[:days[n-1]]))
+                    - Decimal(sum(sol[:-1]))
+                )
+
+            return sol
+
+        if self.dist in ["poisson", "Poisson"]:
+            w = np.array(self.w, dtype="float")
+            days = [i for i in range(self.T) if i not in self.zero_days]
+            days = np.array(days, dtype="int")
+            l = self.omega # lambda
+
+            n = len(days)
+            sol = np.zeros(self.T)
+
+            if 0 not in self.zero_days:
+                pr = (
+                    Decimal(self.b) - Decimal(1 + lam) * Decimal(self.w[0] - self.w[1])
+                ) / Decimal(self.h + self.b)
+                sol[0] = Decimal(
+                    poisson.ppf(
+                        q=np.float64(pr),
+                        mu=l[0]
+                    )
+                )
+                if not np.isfinite(sol[0]):
+                    return sol
+            for t in range(1, self.T - 1):
+                if t not in self.zero_days:
+
+                    pr = (
+                        Decimal(self.b)
+                        - Decimal(1 + lam) * Decimal(self.w[t] - self.w[t + 1])
+                    ) / Decimal(self.h + self.b)
+
+                    sol[t] = Decimal(
+                        norm.ppf(
+                            q=np.float64(pr),
+                            mu=sum(l[: t + 1])
+                            )
+                        )
+                    ) - Decimal(sum(sol[:t]))
+                    if not np.isfinite(sol[t]):
+                        return sol
+                    # print(Decimal(sum(sol[:t])))
+                    # - int(sol[days[i] - 1] > 0) * norm.ppf(q=(b  - (1 + lam) *(w[days[i-1]] - w[days[i]])) / (h + b),
+                    # loc=sum(mu[days[:i]]), scale=np.sqrt(sum(var[days[:i]]))
+            if self.T - 1 not in self.zero_days:
+                pr = (
+                    Decimal(self.b)
+                    - Decimal(1 + lam) * Decimal(self.w[-1])
+                    + Decimal(self.p)
+                ) / Decimal(self.h + self.b + self.p)
+                sol[self.T - 1] = (
+                    Decimal(
+                        poisson.ppf(
+                            q=np.float64(pr),
+                            mu=sum(l)
                         )
                     )
                     # - int(sol[- 2] > 0) * norm.ppf(q=(b - (1 + lam) *(w[days[-2]] - w[days[-1]])) / (h + b),
