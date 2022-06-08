@@ -43,6 +43,12 @@ def norm_conf_val(N, T, omega, omega_hat):
         val += (2 * N / sig_hat[t] ** 2) * (sig_hat[t] - sig[t]) ** 2
     return val
 
+@njit
+def pois_conf_val(N, T, lam, lam_hat):
+    val = 0
+    for t in range(T):
+        val += (N / lam_hat[t]) * (lam_hat[t] - lam[t]) ** 2
+    return val
 
 def mu_sig_combos(mu_0_range, sig_0_range, T):
     return [
