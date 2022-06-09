@@ -1,6 +1,10 @@
-from classes_functions import *
 from multiprocessing import Pool
 import sys, os
+sys.path.append(os.path.relpath("../Repo/src/PDRO_Newsvendor/"))
+from ambiguity_set import *
+from demand_RV import *
+from DRMPNVP import *
+from MPNVP import *
 
 
 def test_algorithms(inp):
