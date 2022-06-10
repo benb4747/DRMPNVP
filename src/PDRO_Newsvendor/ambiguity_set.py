@@ -1,5 +1,5 @@
-from functions import *
-from demand_RV import *
+from .functions import *
+from .demand_RV import *
 from scipy.stats import norm, chi2
 import itertools as it
 import time
@@ -25,14 +25,14 @@ class ambiguity_set:
             mu_hat, sig_hat = omega_hat
             mu_CIs = [
                 (
-                    mu_hat[t] - z * (sig_hat[t] / np.sqrt(N)),
+                    max(mu_hat[t] - z * (sig_hat[t] / np.sqrt(N)), 0),
                     mu_hat[t] + z * (sig_hat[t] / np.sqrt(N)),
                 )
                 for t in range(self.demand.T)
             ]
             sig_CIs = [
                 (
-                    sig_hat[t] - z * (sig_hat[t] / np.sqrt(2 * N)),
+                    max(sig_hat[t] - z * (sig_hat[t] / np.sqrt(2 * N)), 0),
                     sig_hat[t] + z * (sig_hat[t] / np.sqrt(2 * N)),
                 )
                 for t in range(self.demand.T)
@@ -147,27 +147,20 @@ class ambiguity_set:
                     self.time_taken += time.perf_counter() - start
                     return
                 mu, sig = omega
-                same_mu = [o for o in AS_reduced if o[0] == mu]
+                same_mu = [o for o in AS_reduced if o[0] == mu and o[1] != sig]
                 # similar_sig = [o for o in same_mu if np.where(np.array(sig) != np.array(o[1]))[0].shape[0] == 1]
                 for o in same_mu:
                     diff = np.where(np.array(sig) != np.array(o[1]))[0]
-                    if diff.shape[0] == 1:
-                        diff_ind = diff[0]
-                        # print(diff_ind)
-                        if sig[diff_ind] >= o[1][diff_ind]:  # o is dominated by omega
-                            AS_reduced.remove(o)
-            reduced = []
-            for o in self.confidence_set_full:
-                if o in AS_reduced:
-                    reduced.append(o)
-            self.reduced = reduced
+                    if np.all(np.array([o[1][d] <= sig[d] for d in diff])):
+                        AS_reduced.remove(o)
+            
+            self.reduced = AS_reduced
             end = time.perf_counter()
             self.time_taken += end - start
 
         elif self.demand.dist in ["Poisson", "poisson"]:
             # not sure how this will work yet
             reduced = self.confidence_set_full
-        self.reduced = reduced
 
     def compute_extreme_distributions(self):
         start = time.perf_counter()
