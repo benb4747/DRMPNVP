@@ -1,7 +1,7 @@
-from functions import *
-from demand_RV import *
-from ambiguity_set import *
-from DRMPNVP import *
+from .functions import *
+from .demand_RV import *
+from .ambiguity_set import *
+from .DRMPNVP import *
 
 import numpy as np
 from decimal import Decimal, getcontext
