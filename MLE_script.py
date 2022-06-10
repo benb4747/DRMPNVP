@@ -286,7 +286,7 @@ names = [
     "fd_MLE_obj",
     "fd_MLE_tt",
     "fd_MLE_true_obj",
-    "MLE_neg"3
+    "MLE_neg"
 ]
 
 num_reps = 1
