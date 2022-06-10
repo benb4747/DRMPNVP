@@ -286,15 +286,15 @@ names = [
     "fd_MLE_obj",
     "fd_MLE_tt",
     "fd_MLE_true_obj",
-    "MLE_neg"
+    "MLE_neg"3
 ]
 
 num_reps = 1
 num_instances = "all"
 
 if num_reps > 1:
-    results_file = "results_MLE_old.txt"
-    count_file = "count_MLE_old.txt"
+    results_file = "results_MLE.txt"
+    count_file = "count_MLE.txt"
     repeated_inputs = []
     counter = 0
     for T_ in T_vals:
@@ -305,8 +305,8 @@ if num_reps > 1:
         for rep in range(num_reps):
             repeated_inputs += [tuple([i[0], rep, num_MLE] + list(i)[1:]) for i in inps]
 else:
-    results_file = "results_MLE_old.txt"
-    count_file = "count_MLE_old.txt"
+    results_file = "results_MLE.txt"
+    count_file = "count_MLE.txt"
     inps = inputs
     repeated_inputs = [tuple([i[0], 0, 1] + list(i)[1:]) for i in inps]
 
