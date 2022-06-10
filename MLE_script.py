@@ -1,11 +1,10 @@
 # MLE script
 from multiprocessing import Pool
 import sys, os
-sys.path.append(os.path.relpath("../Repo/src/PDRO_Newsvendor/"))
-from ambiguity_set import *
-from demand_RV import *
-from DRMPNVP import *
-from MPNVP import *
+from src.PDRO_Newsvendor.ambiguity_set import *
+from src.PDRO_Newsvendor.demand_RV import *
+from src.PDRO_Newsvendor.DRMPNVP import *
+from src.PDRO_Newsvendor.MPNVP import *
 
 def test_algorithms(inp):
     (
@@ -177,14 +176,14 @@ def test_algorithms_mp(inp):
         logging.exception("Input %s failed on replication %s.\n" % (ind, rep))
 
 
-num_processors = 40
+num_processors = 32
 gurobi_cores = 4
 loop_cores = int(num_processors / gurobi_cores)
 timeout = 4 * 60 * 60
 
 T_vals = range(2, 5)
-mu_0_range = range(1, 21)
-sig_0_range = range(1, 11)
+mu_0_range = range(3, 40)
+sig_0_range = range(3, 15)
 num_omega0 = 3
 
 PWL_gap_vals = list(reversed([0.1, 0.25, 0.5]))
@@ -195,7 +194,9 @@ b_range = list(100 * np.array(range(1, 3)))
 W_range = [4000]
 N_vals = [10, 25, 50]
 
-omega0_all = [mu_sig_combos(mu_0_range, sig_0_range, T_) for T_ in T_vals]
+omega0_all = [[(m, s) for (m, s) in mu_sig_combos(mu_0_range, sig_0_range, T_)
+              if np.all(np.array([s[t] <= m[t] / 3 for t in range(T_)]))] 
+              for T_ in T_vals]
 
 omega0_vals = []
 for T_ in T_vals:

@@ -1,10 +1,9 @@
 from multiprocessing import Pool
 import sys, os
-sys.path.append(os.path.relpath("../Repo/src/PDRO_Newsvendor/"))
-from ambiguity_set import *
-from demand_RV import *
-from DRMPNVP import *
-from MPNVP import *
+from src.PDRO_Newsvendor.ambiguity_set import *
+from src.PDRO_Newsvendor.demand_RV import *
+from src.PDRO_Newsvendor.DRMPNVP import *
+from src.PDRO_Newsvendor.MPNVP import *
 
 
 def test_algorithms(inp):
@@ -71,6 +70,12 @@ def test_algorithms(inp):
                     "Input %s timed out while constructing confidence set. \n" % index
                 )
             return
+    AS.reduce()
+    if AS.reduced == "T.O.":
+        for f in [count_file, results_file]:
+            with open(f, "a") as myfile:
+                myfile.write("Input %s timed out while reducing set. \n" % index)
+            return
     AS.compute_extreme_distributions()
     if AS.extreme_distributions == "T.O.":
         for f in [count_file, results_file]:
@@ -78,12 +83,6 @@ def test_algorithms(inp):
                 myfile.write(
                     "Input %s timed out while constructing extreme set. \n" % index
                 )
-            return
-    AS.reduce()
-    if AS.reduced == "T.O.":
-        for f in [count_file, results_file]:
-            with open(f, "a") as myfile:
-                myfile.write("Input %s timed out while reducing set. \n" % index)
             return
 
     num_dists = len(AS.reduced)
@@ -209,14 +208,14 @@ def test_algorithms_mp(inp):
 
 
 T = int(sys.argv[1]) + 1
-num_processors = 40
+num_processors = 32
 gurobi_cores = 4
 loop_cores = int(num_processors / gurobi_cores)
 timeout = 4 * 60 * 60
 
 T_vals = range(2, 5)
-mu_0_range = range(1, 21)
-sig_0_range = range(1, 11)
+mu_0_range = range(3, 40)
+sig_0_range = range(3, 15)
 num_omega0 = 3
 
 PWL_gap_vals = list(reversed([0.1, 0.25, 0.5]))
@@ -227,7 +226,9 @@ b_range = list(100 * np.array(range(1, 3)))
 W_range = [4000]
 N_vals = [10, 25, 50]
 
-omega0_all = [mu_sig_combos(mu_0_range, sig_0_range, T_) for T_ in T_vals]
+omega0_all = [[(m, s) for (m, s) in mu_sig_combos(mu_0_range, sig_0_range, T_)
+              if np.all(np.array([s[t] <= m[t] / 3 for t in range(T_)]))] 
+              for T_ in T_vals]
 
 omega0_vals = []
 for T_ in T_vals:
@@ -331,8 +332,8 @@ if num_reps > 1:
                 tuple([i[0], rep, num_reps] + list(i)[1:]) for i in inps
             ]
 else:
-    results_file = "results_fast.txt"
-    count_file = "count_fast.txt"
+    results_file = "results_pos.txt"
+    count_file = "count_pos.txt"
     inps = inputs
     repeated_inputs = [tuple([i[0], 0, 1] + list(i)[1:]) for i in inps]
 
@@ -342,7 +343,7 @@ test_full = [
     i for i in inputs if (i[names.index("T")], i[names.index("n_pts")]) != (4, 10)
 ]
 
-continuing = True
+continuing = False
 
 if continuing:
     file1 = open(results_file, "r")
