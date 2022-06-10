@@ -53,6 +53,7 @@ def test_algorithms(inp):
     # construct MLEs and confidence set
     X = demand_RV(dist, T, (mu_0, sig_0), N, seed=index * num_reps + rep)
     X.compute_mles()
+    MLE_neg = np.any(np.array(X.mle) < 0)
     AS = ambiguity_set(X, "confidence_set", alpha, n_pts, timeout)
     AS.construct_base_set()
     if AS.base_set == "T.O.":
@@ -186,6 +187,7 @@ def test_algorithms(inp):
         np.round(fd_true_worst_obj, 5),
         fd_tt,
         fd_true_obj,
+        MLE_neg
     ]
 
     with open(results_file, "a") as res_file:
@@ -221,7 +223,7 @@ sig_0_range = range(1, 11)
 num_omega0 = 3
 
 PWL_gap_vals = list(reversed([0.1, 0.25, 0.5]))
-disc_pts_vals = [3, 5]
+disc_pts_vals = [3, 5, 10]
 p_range = list(100 * np.array(range(1, 3)))
 h_range = list(100 * np.array(range(1, 3)))
 b_range = list(100 * np.array(range(1, 3)))
