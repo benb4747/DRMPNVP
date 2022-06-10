@@ -136,6 +136,23 @@ class ambiguity_set:
         if tuple(self.demand.mle) not in self.confidence_set_full:
             self.confidence_set_full.append(tuple(self.demand.mle))
 
+    @njit
+    def np_all(self, x):
+        for i in range(len(x)):
+            if not x[i]:
+                return False
+        return True
+
+    @njit
+    def find_dominated(self, same_mu, omega):
+        mu, sig = omega[0], omega[1]
+        dominated = []
+        for i in range(same_mu.shape[0]):
+            sig_ = same_mu[i, 1]
+            if self.np_all(sig_ <= sig):
+                dominated.append(same_mu[i])
+        return dominated
+
     def reduce(self):
         if self.demand.dist in ["Normal", "normal"]:
             left = self.timeout - self.time_taken
@@ -147,20 +164,22 @@ class ambiguity_set:
                     self.time_taken += time.perf_counter() - start
                     return
                 mu, sig = omega
-                same_mu = [o for o in AS_reduced if o[0] == mu and o[1] != sig]
-                # similar_sig = [o for o in same_mu if np.where(np.array(sig) != np.array(o[1]))[0].shape[0] == 1]
-                for o in same_mu:
-                    diff = np.where(np.array(sig) != np.array(o[1]))[0]
-                    if np.all(np.array([o[1][d] <= sig[d] for d in diff])):
-                        AS_reduced.remove(o)
-            
-            self.reduced = AS_reduced
+                same_mu = np.array([o for o in AS_reduced if o[0] == mu and o[1] != sig])
+                if same_mu.shape[0] > 0:
+                    dominated = self.find_dominated(same_mu, np.array(omega))
+                    #print(dominated)
+                else:
+                    dominated = []
+                for o in dominated:
+                    o = tuple([tuple(x) for x in o])
+                    AS_reduced.remove(o)   
             end = time.perf_counter()
             self.time_taken += end - start
+            self.reduced = AS_reduced
 
         elif self.demand.dist in ["Poisson", "poisson"]:
             # not sure how this will work yet
-            reduced = self.confidence_set_full
+            self.reduced = self.confidence_set_full
 
     def compute_extreme_distributions(self):
         start = time.perf_counter()
