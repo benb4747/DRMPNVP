@@ -214,21 +214,25 @@ loop_cores = int(num_processors / gurobi_cores)
 timeout = 4 * 60 * 60
 
 T_vals = range(2, 5)
-mu_0_range = range(3, 40)
-sig_0_range = range(3, 15)
+#mu_0_range = range(3, 40)
+#sig_0_range = range(3, 15)
+mu_0_range = range(1, 21)
+sig_0_range = range(1, 11)
 num_omega0 = 3
 
 PWL_gap_vals = list(reversed([0.1, 0.25, 0.5]))
-disc_pts_vals = [3, 5, 10]
+disc_pts_vals = [3, 5]
 p_range = list(100 * np.array(range(1, 3)))
 h_range = list(100 * np.array(range(1, 3)))
 b_range = list(100 * np.array(range(1, 3)))
 W_range = [4000]
 N_vals = [10, 25, 50]
 
-omega0_all = [[(m, s) for (m, s) in mu_sig_combos(mu_0_range, sig_0_range, T_)
-              if np.all(np.array([s[t] <= m[t] / 3 for t in range(T_)]))] 
-              for T_ in T_vals]
+#omega0_all = [[(m, s) for (m, s) in mu_sig_combos(mu_0_range, sig_0_range, T_)
+ #             if np.all(np.array([s[t] <= m[t] / 3 for t in range(T_)]))] 
+  #            for T_ in T_vals]
+
+omega0_all = [mu_sig_combos(mu_0_range, sig_0_range, T_) for T_ in T_vals]
 
 omega0_vals = []
 for T_ in T_vals:
