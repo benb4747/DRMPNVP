@@ -53,7 +53,7 @@ def test_algorithms(inp):
     # construct MLEs and confidence set
     X = demand_RV(dist, T, omega_0, N, seed=index * num_MLE + rep)
     X.compute_mles()
-
+    MLE_neg = np.any(np.array(X.mle) < 0)
     headers += [1, 1]
     DRO_problem = DRMPNVP(
         T, W, w, p, h, b, PWL_gap, solver_timeout, solver_cores, dist, AS=[]
@@ -155,6 +155,7 @@ def test_algorithms(inp):
         np.round(fd_MLE_obj, 5),
         fd_MLE_tt,
         fd_MLE_true_obj,
+        MLE_neg
     ]
 
     with open(results_file, "a") as res_file:
@@ -182,8 +183,10 @@ loop_cores = int(num_processors / gurobi_cores)
 timeout = 4 * 60 * 60
 
 T_vals = range(2, 5)
-mu_0_range = range(3, 40)
-sig_0_range = range(3, 15)
+#mu_0_range = range(3, 40)
+#sig_0_range = range(3, 15)
+mu_0_range = range(1, 21)
+sig_0_range = range(1, 11)
 num_omega0 = 3
 
 PWL_gap_vals = list(reversed([0.1, 0.25, 0.5]))
@@ -194,9 +197,11 @@ b_range = list(100 * np.array(range(1, 3)))
 W_range = [4000]
 N_vals = [10, 25, 50]
 
-omega0_all = [[(m, s) for (m, s) in mu_sig_combos(mu_0_range, sig_0_range, T_)
-              if np.all(np.array([s[t] <= m[t] / 3 for t in range(T_)]))] 
-              for T_ in T_vals]
+#omega0_all = [[(m, s) for (m, s) in mu_sig_combos(mu_0_range, sig_0_range, T_)
+ #             if np.all(np.array([s[t] <= m[t] / 3 for t in range(T_)]))] 
+  #            for T_ in T_vals]
+
+omega0_all = [mu_sig_combos(mu_0_range, sig_0_range, T_) for T_ in T_vals]
 
 omega0_vals = []
 for T_ in T_vals:
@@ -281,14 +286,15 @@ names = [
     "fd_MLE_obj",
     "fd_MLE_tt",
     "fd_MLE_true_obj",
+    "MLE_neg"
 ]
 
 num_reps = 1
 num_instances = "all"
 
 if num_reps > 1:
-    results_file = "results_MLE.txt"
-    count_file = "count_MLE.txt"
+    results_file = "results_MLE_old.txt"
+    count_file = "count_MLE_old.txt"
     repeated_inputs = []
     counter = 0
     for T_ in T_vals:
@@ -299,8 +305,8 @@ if num_reps > 1:
         for rep in range(num_reps):
             repeated_inputs += [tuple([i[0], rep, num_MLE] + list(i)[1:]) for i in inps]
 else:
-    results_file = "results_MLE.txt"
-    count_file = "count_MLE.txt"
+    results_file = "results_MLE_old.txt"
+    count_file = "count_MLE_old.txt"
     inps = inputs
     repeated_inputs = [tuple([i[0], 0, 1] + list(i)[1:]) for i in inps]
 
