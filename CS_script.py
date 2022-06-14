@@ -81,12 +81,14 @@ def test_algorithms(inp):
                     "Input %s timed out while constructing confidence set. \n" % index
                 )
             return
-    AS.reduce()
-    if AS.reduced == "T.O.":
-        for f in [count_file, results_file]:
-            with open(f, "a") as myfile:
-                myfile.write("Input %s timed out while reducing set. \n" % index)
-            return
+    #AS.reduce()
+    #if AS.reduced == "T.O.":
+    #    for f in [count_file, results_file]:
+    #        with open(f, "a") as myfile:
+    #            myfile.write("Input %s timed out while reducing set. \n" %
+    #            #index)
+    #        return
+    AS.reduced = AS.confidence_set_full
     AS.compute_extreme_distributions()
     if AS.extreme_distributions == "T.O.":
         for f in [count_file, results_file]:
