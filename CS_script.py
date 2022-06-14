@@ -92,7 +92,6 @@ def test_algorithms(inp):
             with open(f, "a") as myfile:
                 myfile.write("Input %s timed out while reducing set. \n" % index)
             return
-    AS.reduced = AS.confidence_set_full
     AS.compute_extreme_distributions()
     if AS.extreme_distributions == "T.O.":
         for f in [count_file, results_file]:
@@ -342,7 +341,7 @@ names = [
     "fd_true_worst_obj",
     "fd_tt",
     "fd_true_obj",
-    "MLE_neg",
+    "MLE_neg"
 ]
 
 num_reps = 1
