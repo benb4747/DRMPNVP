@@ -72,10 +72,10 @@ class ambiguity_set:
                 for t in range(self.demand.T)
             ]
 
-            mu_vals = list(it.product(*mu_CIs_disc))
-            sig_vals = list(it.product(*sig_CIs_disc))
+            mu_vals = it.product(*mu_CIs_disc)
+            sig_vals = it.product(*sig_CIs_disc)
 
-            Omega = [(mu, sig) for mu in mu_vals for sig in sig_vals]
+            Omega = it.product(mu_vals, sig_vals)
             end = time.perf_counter()
 
         elif self.demand.dist in ["Poisson", "poisson"]:
