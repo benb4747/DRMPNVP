@@ -4,22 +4,6 @@ from scipy.stats import norm, chi2
 import itertools as it
 import time
 
-@njit
-def np_all(x):
-    for i in range(len(x)):
-        if not x[i]:
-            return False
-    return True
-
-@njit
-def find_dominated(same_mu, omega):
-    mu, sig = omega[0], omega[1]
-    dominated = []
-    for i in range(same_mu.shape[0]):
-        sig_ = same_mu[i, 1]
-        if np_all(sig_ <= sig):
-            dominated.append(same_mu[i])
-    return dominated
 
 class ambiguity_set:
     def __init__(self, demand, set_type, alpha, n_pts, timeout):
@@ -149,32 +133,27 @@ class ambiguity_set:
             self.confidence_set_full = confset
             self.time_taken += time.perf_counter() - start
 
-        if tuple(self.demand.mle) not in self.confidence_set_full:
-            self.confidence_set_full.append(tuple(self.demand.mle))
+        if self.demand.mle not in self.confidence_set_full:
+            self.confidence_set_full.append(self.demand.mle)
 
     def reduce(self):
         if self.demand.dist in ["Normal", "normal"]:
             left = self.timeout - self.time_taken
             start = time.perf_counter()
-            AS_reduced = self.confidence_set_full.copy()
-            for omega in AS_reduced:
-                if time.perf_counter() - start > left:
-                    self.reduced = "T.O."
-                    self.time_taken += time.perf_counter() - start
-                    return
-                mu, sig = omega
-                same_mu = np.array([o for o in AS_reduced if o[0] == mu and o[1] != sig])
-                if same_mu.shape[0] > 0:
-                    dominated = find_dominated(same_mu, np.array(omega))
-                    #print(dominated)
-                else:
-                    dominated = []
-                for o in dominated:
-                    o = tuple([tuple(x) for x in o])
-                    AS_reduced.remove(o)   
+            not_dominated = it.filterfalse(
+                lambda x: np.any(
+                    [
+                        np.all(np.array(o[1]) >= np.array(x[1]))
+                        for o in self.confidence_set_full
+                        if o[0] == x[0] and o[1] != x[1]
+                    ]
+                ),
+                self.confidence_set_full,
+            )
+            ASR = [x for x in not_dominated]
             end = time.perf_counter()
             self.time_taken += end - start
-            self.reduced = AS_reduced
+            self.reduced = ASR
 
         elif self.demand.dist in ["Poisson", "poisson"]:
             # not sure how this will work yet
