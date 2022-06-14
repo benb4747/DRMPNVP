@@ -16,12 +16,13 @@ class demand_RV:
             mu, sig = self.omega_0
             Sig = np.zeros((self.T, self.T))
             for t in range(self.T):
-                Sig[t, t] = sig[t]
+                Sig[t, t] = sig[t] ** 2
             np.random.seed(self.seed)
             samples = np.random.multivariate_normal(mean=mu, cov=Sig, size=self.N)
             mu_MLE = [np.mean(samples[:, t]) for t in range(self.T)]
 
-            sig_MLE = [np.mean((samples[:, t] - mu_MLE[t]) ** 2) for t in range(self.T)]
+            sig_MLE = [np.sqrt(np.mean((samples[:, t] - mu_MLE[t]) ** 2))
+                       for t in range(self.T)]
 
             self.mle = (mu_MLE, sig_MLE)
         elif self.dist == "poisson" or self.dist == "Poisson":
