@@ -54,8 +54,13 @@ def test_algorithms(inp):
     X = demand_RV(dist, T, (mu_0, sig_0), N, seed=index * num_reps + rep)
     X.compute_mles()
     MLE_neg = np.any(np.array(X.mle) < 0)
+    if MLE_neg:
+        for f in [count_file, results_file]:
+            with open(f, "a") as myfile:
+                myfile.write("Input %s had negative MLEs. \n" % index)
+            return
     AS = ambiguity_set(X, "confidence_set", alpha, n_pts, timeout)
-    try: 
+    try:
         AS.construct_base_set()
     except MemoryError:
         AS.base_set = "T.O."
@@ -81,13 +86,12 @@ def test_algorithms(inp):
                     "Input %s timed out while constructing confidence set. \n" % index
                 )
             return
-    #AS.reduce()
-    #if AS.reduced == "T.O.":
-    #    for f in [count_file, results_file]:
-    #        with open(f, "a") as myfile:
-    #            myfile.write("Input %s timed out while reducing set. \n" %
-    #            #index)
-    #        return
+    AS.reduce()
+    if AS.reduced == "T.O.":
+        for f in [count_file, results_file]:
+            with open(f, "a") as myfile:
+                myfile.write("Input %s timed out while reducing set. \n" % index)
+            return
     AS.reduced = AS.confidence_set_full
     AS.compute_extreme_distributions()
     if AS.extreme_distributions == "T.O.":
@@ -199,7 +203,7 @@ def test_algorithms(inp):
         np.round(fd_true_worst_obj, 5),
         fd_tt,
         fd_true_obj,
-        MLE_neg
+        MLE_neg,
     ]
 
     with open(results_file, "a") as res_file:
@@ -228,8 +232,8 @@ loop_cores = int(num_processors / gurobi_cores)
 timeout = 4 * 60 * 60
 
 T_vals = range(2, 5)
-#mu_0_range = range(3, 40)
-#sig_0_range = range(3, 15)
+# mu_0_range = range(3, 40)
+# sig_0_range = range(3, 15)
 mu_0_range = range(1, 21)
 sig_0_range = range(1, 11)
 num_omega0 = 3
@@ -242,11 +246,16 @@ b_range = list(100 * np.array(range(1, 3)))
 W_range = [4000]
 N_vals = [10, 25, 50]
 
-#omega0_all = [[(m, s) for (m, s) in mu_sig_combos(mu_0_range, sig_0_range, T_)
- #             if np.all(np.array([s[t] <= m[t] / 3 for t in range(T_)]))] 
-  #            for T_ in T_vals]
+omega0_all = [
+    [
+        (m, s)
+        for (m, s) in mu_sig_combos(mu_0_range, sig_0_range, T_)
+        if np.all(np.array([s[t] <= m[t] / 3 for t in range(T_)]))
+    ]
+    for T_ in T_vals
+]
 
-omega0_all = [mu_sig_combos(mu_0_range, sig_0_range, T_) for T_ in T_vals]
+# omega0_all = [mu_sig_combos(mu_0_range, sig_0_range, T_) for T_ in T_vals]
 
 omega0_vals = []
 for T_ in T_vals:
@@ -333,7 +342,7 @@ names = [
     "fd_true_worst_obj",
     "fd_tt",
     "fd_true_obj",
-    "MLE_neg"
+    "MLE_neg",
 ]
 
 num_reps = 1
@@ -351,8 +360,8 @@ if num_reps > 1:
                 tuple([i[0], rep, num_reps] + list(i)[1:]) for i in inps
             ]
 else:
-    results_file = "results_pos.txt"
-    count_file = "count_pos.txt"
+    results_file = "results_final.txt"
+    count_file = "count_final.txt"
     inps = inputs
     repeated_inputs = [tuple([i[0], 0, 1] + list(i)[1:]) for i in inps]
 
@@ -371,7 +380,7 @@ if continuing:
 
     lines_new = []
     failed = []
-    #names = eval(lines[0])
+    # names = eval(lines[0])
     for line in lines[1:]:
         line = line.rstrip("\n")
         if "failed" not in line:

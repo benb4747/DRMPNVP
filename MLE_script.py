@@ -6,6 +6,7 @@ from src.demand_RV import *
 from src.DRMPNVP import *
 from src.MPNVP import *
 
+
 def test_algorithms(inp):
     (
         index,
@@ -54,6 +55,11 @@ def test_algorithms(inp):
     X = demand_RV(dist, T, omega_0, N, seed=index * num_MLE + rep)
     X.compute_mles()
     MLE_neg = np.any(np.array(X.mle) < 0)
+    if MLE_neg:
+        for f in [count_file, results_file]:
+            with open(f, "a") as myfile:
+                myfile.write("Input %s had negative MLEs. \n" % index)
+            return
     headers += [1, 1]
     DRO_problem = DRMPNVP(
         T, W, w, p, h, b, PWL_gap, solver_timeout, solver_cores, dist, AS=[]
@@ -155,7 +161,7 @@ def test_algorithms(inp):
         np.round(fd_MLE_obj, 5),
         fd_MLE_tt,
         fd_MLE_true_obj,
-        MLE_neg
+        MLE_neg,
     ]
 
     with open(results_file, "a") as res_file:
@@ -183,8 +189,8 @@ loop_cores = int(num_processors / gurobi_cores)
 timeout = 4 * 60 * 60
 
 T_vals = range(2, 5)
-#mu_0_range = range(3, 40)
-#sig_0_range = range(3, 15)
+# mu_0_range = range(3, 40)
+# sig_0_range = range(3, 15)
 mu_0_range = range(1, 21)
 sig_0_range = range(1, 11)
 num_omega0 = 3
@@ -197,11 +203,16 @@ b_range = list(100 * np.array(range(1, 3)))
 W_range = [4000]
 N_vals = [10, 25, 50]
 
-#omega0_all = [[(m, s) for (m, s) in mu_sig_combos(mu_0_range, sig_0_range, T_)
- #             if np.all(np.array([s[t] <= m[t] / 3 for t in range(T_)]))] 
-  #            for T_ in T_vals]
+omega0_all = [
+    [
+        (m, s)
+        for (m, s) in mu_sig_combos(mu_0_range, sig_0_range, T_)
+        if np.all(np.array([s[t] <= m[t] / 3 for t in range(T_)]))
+    ]
+    for T_ in T_vals
+]
 
-omega0_all = [mu_sig_combos(mu_0_range, sig_0_range, T_) for T_ in T_vals]
+# omega0_all = [mu_sig_combos(mu_0_range, sig_0_range, T_) for T_ in T_vals]
 
 omega0_vals = []
 for T_ in T_vals:
@@ -286,7 +297,7 @@ names = [
     "fd_MLE_obj",
     "fd_MLE_tt",
     "fd_MLE_true_obj",
-    "MLE_neg"
+    "MLE_neg",
 ]
 
 num_reps = 1
@@ -316,7 +327,7 @@ test_full = [
     i for i in inputs if (i[names.index("T")], i[names.index("n_pts")]) != (4, 10)
 ]
 
-#test_full = inputs
+# test_full = inputs
 
 continuing = False
 
