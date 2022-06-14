@@ -356,13 +356,11 @@ else:
 
 inputs = repeated_inputs
 
-#test_full = [
- #   i for i in inputs if (i[names.index("T")], i[names.index("n_pts")]) != (4, 10)
-#]
+test_full = [
+    i for i in inputs if (i[names.index("T")], i[names.index("n_pts")]) != (4, 10)
+]
 
-test_full = inputs # gunna do the big instances too, they will likely time out
-
-continuing = True
+continuing = False
 
 if continuing:
     file1 = open(results_file, "r")
