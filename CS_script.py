@@ -1,9 +1,9 @@
 from multiprocessing import Pool
 import sys, os
-from src.PDRO_Newsvendor.ambiguity_set import *
-from src.PDRO_Newsvendor.demand_RV import *
-from src.PDRO_Newsvendor.DRMPNVP import *
-from src.PDRO_Newsvendor.MPNVP import *
+from src.ambiguity_set import *
+from src.demand_RV import *
+from src.DRMPNVP import *
+from src.MPNVP import *
 
 
 def test_algorithms(inp):

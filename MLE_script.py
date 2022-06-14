@@ -1,10 +1,10 @@
 # MLE script
 from multiprocessing import Pool
 import sys, os
-from src.PDRO_Newsvendor.ambiguity_set import *
-from src.PDRO_Newsvendor.demand_RV import *
-from src.PDRO_Newsvendor.DRMPNVP import *
-from src.PDRO_Newsvendor.MPNVP import *
+from src.ambiguity_set import *
+from src.demand_RV import *
+from src.DRMPNVP import *
+from src.MPNVP import *
 
 def test_algorithms(inp):
     (
@@ -177,7 +177,7 @@ def test_algorithms_mp(inp):
         logging.exception("Input %s failed on replication %s.\n" % (ind, rep))
 
 
-num_processors = 32
+num_processors = 40
 gurobi_cores = 4
 loop_cores = int(num_processors / gurobi_cores)
 timeout = 4 * 60 * 60
@@ -312,13 +312,13 @@ else:
 
 inputs = repeated_inputs
 
-#test_full = [
- #   i for i in inputs if (i[names.index("T")], i[names.index("n_pts")]) != (4, 10)
-#]
+test_full = [
+    i for i in inputs if (i[names.index("T")], i[names.index("n_pts")]) != (4, 10)
+]
 
-test_full = inputs
+#test_full = inputs
 
-continuing = True
+continuing = False
 
 if continuing:
     file1 = open(results_file, "r")
