@@ -55,7 +55,17 @@ def test_algorithms(inp):
     X.compute_mles()
     MLE_neg = np.any(np.array(X.mle) < 0)
     AS = ambiguity_set(X, "confidence_set", alpha, n_pts, timeout)
-    AS.construct_base_set()
+    try: 
+        AS.construct_base_set()
+    except MemoryError:
+        AS.base_set = "T.O."
+        for f in [count_file, results_file]:
+            with open(f, "a") as myfile:
+                myfile.write(
+                    "Input %s had MemoryError while constructing base AS. \n" % index
+                )
+            return
+
     if AS.base_set == "T.O.":
         for f in [count_file, results_file]:
             with open(f, "a") as myfile:
@@ -321,6 +331,7 @@ names = [
     "fd_true_worst_obj",
     "fd_tt",
     "fd_true_obj",
+    "MLE_neg"
 ]
 
 num_reps = 1
@@ -345,11 +356,13 @@ else:
 
 inputs = repeated_inputs
 
-test_full = [
-    i for i in inputs if (i[names.index("T")], i[names.index("n_pts")]) != (4, 10)
-]
+#test_full = [
+ #   i for i in inputs if (i[names.index("T")], i[names.index("n_pts")]) != (4, 10)
+#]
 
-continuing = False
+test_full = inputs # gunna do the big instances too, they will likely time out
+
+continuing = True
 
 if continuing:
     file1 = open(results_file, "r")
@@ -358,7 +371,7 @@ if continuing:
 
     lines_new = []
     failed = []
-    names = eval(lines[0])
+    #names = eval(lines[0])
     for line in lines[1:]:
         line = line.rstrip("\n")
         if "failed" not in line:

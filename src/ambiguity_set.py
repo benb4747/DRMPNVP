@@ -4,6 +4,22 @@ from scipy.stats import norm, chi2
 import itertools as it
 import time
 
+@njit
+def np_all(x):
+    for i in range(len(x)):
+        if not x[i]:
+            return False
+    return True
+
+@njit
+def find_dominated(same_mu, omega):
+    mu, sig = omega[0], omega[1]
+    dominated = []
+    for i in range(same_mu.shape[0]):
+        sig_ = same_mu[i, 1]
+        if np_all(sig_ <= sig):
+            dominated.append(same_mu[i])
+    return dominated
 
 class ambiguity_set:
     def __init__(self, demand, set_type, alpha, n_pts, timeout):
@@ -136,23 +152,6 @@ class ambiguity_set:
         if tuple(self.demand.mle) not in self.confidence_set_full:
             self.confidence_set_full.append(tuple(self.demand.mle))
 
-    @njit
-    def np_all(self, x):
-        for i in range(len(x)):
-            if not x[i]:
-                return False
-        return True
-
-    @njit
-    def find_dominated(self, same_mu, omega):
-        mu, sig = omega[0], omega[1]
-        dominated = []
-        for i in range(same_mu.shape[0]):
-            sig_ = same_mu[i, 1]
-            if self.np_all(sig_ <= sig):
-                dominated.append(same_mu[i])
-        return dominated
-
     def reduce(self):
         if self.demand.dist in ["Normal", "normal"]:
             left = self.timeout - self.time_taken
@@ -166,7 +165,7 @@ class ambiguity_set:
                 mu, sig = omega
                 same_mu = np.array([o for o in AS_reduced if o[0] == mu and o[1] != sig])
                 if same_mu.shape[0] > 0:
-                    dominated = self.find_dominated(same_mu, np.array(omega))
+                    dominated = find_dominated(same_mu, np.array(omega))
                     #print(dominated)
                 else:
                     dominated = []
