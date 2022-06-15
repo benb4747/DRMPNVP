@@ -159,7 +159,6 @@ def test_algorithms_mp(inp):
         logging.exception("Input %s failed on replication %s.\n" % (ind, rep))
 
 
-T = int(sys.argv[1]) + 1
 num_processors = 32
 gurobi_cores = 4
 loop_cores = num_processors 
@@ -332,19 +331,17 @@ if continuing:
 else:
     test = test_full
 
-if T == 2 and continuing:
+if continuing:
     with open(count_file, "a") as myfile:
         myfile.write(
             "About to start solving the %s instances that didn't finish solving before. \n"
             % len(test)
         )
-
-test = [i for i in test if i[names.index("T")] == T]
 # test = [i for i in test if i[3] == T][:32]
 
 
 # wipes results file
-if T == 2 and not continuing:
+if not continuing:
     open(count_file, "w").close()
     open(results_file, "w").close()
     with open(count_file, "a") as myfile:
