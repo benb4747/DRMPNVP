@@ -150,7 +150,13 @@ class ambiguity_set:
                 ),
                 self.confidence_set_full,
             )
-            ASR = [x for x in not_dominated]
+            ASR = []
+            for o in not_dominated:
+                if time.perf_counter() - start < left: 
+                    ASR.append(o)
+                else:
+                    self.reduced = "T.O."
+                    return
             end = time.perf_counter()
             self.time_taken += end - start
             self.reduced = ASR
