@@ -200,7 +200,7 @@ disc_pts_vals = [3, 5, 10]
 p_range = list(100 * np.array(range(1, 3)))
 h_range = list(100 * np.array(range(1, 3)))
 b_range = list(100 * np.array(range(1, 3)))
-W_range = [4000]
+W_range = [4000, 4000, 8000]
 N_vals = [10, 25, 50]
 
 omega0_all = [
@@ -225,7 +225,7 @@ inputs = [
         mu_0,
         sig_0,
         T_,
-        W,
+        W_range[T_vals.index(T_)],
         w,
         p,
         h,
@@ -247,7 +247,6 @@ inputs = [
     for N in N_vals
     for n_pts in disc_pts_vals
     for w in [list(100 * np.array(range(1, T_ + 1))[::-1])]
-    for W in W_range
     if b > max([w[t] - w[t + 1] for t in range(T_ - 1)])
 ]
 
@@ -325,6 +324,7 @@ inputs = repeated_inputs
 
 test_full = [
     i for i in inputs if (i[names.index("T")], i[names.index("n_pts")]) != (4, 10)
+    and if (i[names.index("T")], i[names.index("n_pts")]) != (3, 10)
 ]
 
 # test_full = inputs
