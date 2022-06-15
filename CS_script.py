@@ -112,7 +112,7 @@ def test_algorithms(inp):
     AS_tt = AS.time_taken
     headers += [len(AS.confidence_set_full), len(AS.reduced)]
     DRO_problem = DRMPNVP(
-        T, W, w, p, h, b, PWL_gap, timeout, solver_cores, dist, AS
+        T, W, w, p, h, b, PWL_gap, timeout - AS_tt, solver_cores, dist, AS
     )
 
     PWL_sol = DRO_problem.PWL_solve(AS.reduced)
@@ -224,11 +224,11 @@ def test_algorithms_mp(inp):
         logging.exception("Input %s failed on replication %s.\n" % (ind, rep))
 
 
-T = int(sys.argv[1]) + 1
+#T = int(sys.argv[1]) + 1
 num_processors = 32
 gurobi_cores = 4
 loop_cores = int(num_processors / gurobi_cores)
-timeout = 4 * 60 * 60
+timeout = 8 * 60 * 60
 
 T_vals = range(2, 5)
 # mu_0_range = range(3, 40)
@@ -239,10 +239,11 @@ num_omega0 = 3
 
 PWL_gap_vals = list(reversed([0.1, 0.25, 0.5]))
 disc_pts_vals = [3, 5, 10]
+M = disc_pts_vals[int(sys.argv[1]) - 1]
 p_range = list(100 * np.array(range(1, 3)))
 h_range = list(100 * np.array(range(1, 3)))
 b_range = list(100 * np.array(range(1, 3)))
-W_range = [4000]
+W_range = [4000, 4000, 8000]
 N_vals = [10, 25, 50]
 
 omega0_all = [
@@ -267,7 +268,7 @@ inputs = [
         mu_0,
         sig_0,
         T_,
-        W,
+        W_range[T_vals.index(T_)],
         w,
         p,
         h,
@@ -289,7 +290,6 @@ inputs = [
     for N in N_vals
     for n_pts in disc_pts_vals
     for w in [list(100 * np.array(range(1, T_ + 1))[::-1])]
-    for W in W_range
     if b > max([w[t] - w[t + 1] for t in range(T_ - 1)])
 ]
 
@@ -416,25 +416,27 @@ if continuing:
 else:
     test = test_full
 
-if T == 2 and continuing:
+#if T == 2 and continuing:
+if M == 3 and continuing:
     with open(count_file, "a") as myfile:
         myfile.write(
             "About to start solving the %s instances that didn't finish solving before. \n"
             % len(test)
         )
 
-test = [i for i in test if i[names.index("T")] == T]
-# test = [i for i in test if i[3] == T][:32]
+#test = [i for i in test if i[names.index("T")] == T]
+test = [i for i in test if i[names.index("n_pts")] == M]
 
 
 # wipes results file
-if T == 2 and not continuing:
+#if T == 2 and not continuing:
+if M == 3 and not continuing:
     open(count_file, "w").close()
     open(results_file, "w").close()
     with open(count_file, "a") as myfile:
         myfile.write(
             "About to start solving %s instances with the repeated sampling approach. \n"
-            % len(repeated_inputs)
+            % len(test)
         )
     with open(results_file, "a") as myfile:
         myfile.write(str(names) + "\n")
