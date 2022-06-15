@@ -112,7 +112,7 @@ def test_algorithms(inp):
     AS_tt = AS.time_taken
     headers += [len(AS.confidence_set_full), len(AS.reduced)]
     DRO_problem = DRMPNVP(
-        T, W, w, p, h, b, PWL_gap, timeout - AS_tt, solver_cores, dist, AS
+        T, W, w, p, h, b, PWL_gap, timeout, solver_cores, dist, AS
     )
 
     PWL_sol = DRO_problem.PWL_solve(AS.reduced)
