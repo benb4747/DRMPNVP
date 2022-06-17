@@ -180,7 +180,7 @@ def test_algorithms_mp(inp):
         logging.exception("Input %s failed on replication %s.\n" % (ind, rep))
 
 
-num_processors = 40
+num_processors = 32
 gurobi_cores = 4
 loop_cores = int(num_processors / gurobi_cores)
 timeout = 4 * 60 * 60
@@ -199,13 +199,10 @@ N_vals = [10, 25, 50]
 
 # lam0_all = [mu_sig_combos(mu_0_range, sig_0_range, T_) for T_ in T_vals]
 
-lam0_vals = []
-for T_ in T_vals:
-    lam_range = [lam_0_range for t in range(T_)]
-    lam0_all = list(it.product(*lam_range))
-    np.random.seed(T_vals.index(T_))
-    indices = np.random.choice(range(len(lam0_all)), num_lam0)
-    lam0_vals.append([lam0_all[i] for i in indices])
+with open("means.txt", "r") as f:
+    lines = f.readlines()
+    
+lam0_vals = [[eval(mu) for mu in lines if len(eval(mu)) == T] for T in T_vals]
 
 inputs = [
     (
