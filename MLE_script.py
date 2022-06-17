@@ -29,6 +29,9 @@ def test_algorithms(inp):
         alpha,
     ) = inp
 
+    if T == 4:
+        solver_timeout *= 2
+
     headers = [
         index,
         rep,
@@ -197,6 +200,7 @@ num_omega0 = 3
 
 PWL_gap_vals = list(reversed([0.1, 0.25, 0.5]))
 disc_pts_vals = [3, 5, 10]
+#M = disc_pts_vals[int(sys.argv[1]) - 1]
 p_range = list(100 * np.array(range(1, 3)))
 h_range = list(100 * np.array(range(1, 3)))
 b_range = list(100 * np.array(range(1, 3)))
@@ -324,7 +328,7 @@ inputs = repeated_inputs
 
 test_full = [
     i for i in inputs if (i[names.index("T")], i[names.index("n_pts")]) != (4, 10)
-    and if (i[names.index("T")], i[names.index("n_pts")]) != (3, 10)
+    and (i[names.index("T")], i[names.index("n_pts")]) != (3, 10)
 ]
 
 # test_full = inputs
