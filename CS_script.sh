@@ -19,4 +19,4 @@ export MC_CORES=$num_threads ###Limits some packages in R
 export OMP_NUM_THREADS=$num_threads ### Limits OpenMP
 export NUMEXPR_NUM_THREADS=$num_threads ### Limits NUMEXR in p
 
-python3 CS_script.py $PBS_ARRAYID
+python3 CS_script_poisson.py $PBS_ARRAYID

@@ -18,4 +18,4 @@ export MC_CORES=$num_threads ###Limits some packages in R
 export OMP_NUM_THREADS=$num_threads ### Limits OpenMP
 export NUMEXPR_NUM_THREADS=$num_threads ### Limits NUMEXR in p
 
-python3 MLE_script.py
+python3 MLE_script_poisson.py
