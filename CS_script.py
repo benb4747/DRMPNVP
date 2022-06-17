@@ -228,7 +228,7 @@ def test_algorithms_mp(inp):
 num_processors = 32
 gurobi_cores = 4
 loop_cores = int(num_processors / gurobi_cores)
-timeout = 8 * 60 * 60
+timeout = 4 * 60 * 60
 
 T_vals = range(2, 5)
 # mu_0_range = range(3, 40)
@@ -238,8 +238,8 @@ sig_0_range = range(1, 11)
 num_omega0 = 3
 
 PWL_gap_vals = list(reversed([0.1, 0.25, 0.5]))
+gap = PWL_gap_vals[int(sys.argv[1]) - 1]
 disc_pts_vals = [3, 5, 10]
-M = disc_pts_vals[int(sys.argv[1]) - 1]
 p_range = list(100 * np.array(range(1, 3)))
 h_range = list(100 * np.array(range(1, 3)))
 b_range = list(100 * np.array(range(1, 3)))
@@ -417,7 +417,7 @@ else:
     test = test_full
 
 #if T == 2 and continuing:
-if M == 3 and continuing:
+if gap == 0.1 and continuing:
     with open(count_file, "a") as myfile:
         myfile.write(
             "About to start solving the %s instances that didn't finish solving before. \n"
@@ -425,12 +425,12 @@ if M == 3 and continuing:
         )
 
 #test = [i for i in test if i[names.index("T")] == T]
-test = [i for i in test if i[names.index("n_pts")] == M]
+test = [i for i in test if i[names.index("PWL_gap")] == gap]
 
 
 # wipes results file
 #if T == 2 and not continuing:
-if M == 3 and not continuing:
+if gap == 0.1 and not continuing:
     open(count_file, "w").close()
     open(results_file, "w").close()
     with open(count_file, "a") as myfile:
