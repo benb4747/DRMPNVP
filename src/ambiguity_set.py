@@ -117,7 +117,7 @@ class ambiguity_set:
                 self.time_taken += time.perf_counter() - start
 
         if self.demand.dist in ["Poisson", "poisson"]:
-            chi = chi2.ppf(q=1 - self.alpha, df=2 * self.demand.T)
+            chi = chi2.ppf(q=1 - self.alpha, df=self.demand.T)
             confset = []
             for lam in self.base_set:
                 if (
