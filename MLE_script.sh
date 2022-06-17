@@ -1,5 +1,5 @@
 #PBS -l ncpus=40
-#PBS -N MLE_MPNVP_test
+#PBS -N MLE_Poisson
 #PBS -o Output
 #PBS -j oe
 #PBS -m ae

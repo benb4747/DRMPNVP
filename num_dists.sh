@@ -1,5 +1,5 @@
 #PBS -l ncpus=32
-#PBS -N ambiguity_sets
+#PBS -N ambiguity_sets_Poisson
 #PBS -o Output
 #PBS -j oe
 #PBS -m ae
