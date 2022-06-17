@@ -129,7 +129,7 @@ class MPNVP(DRMPNVP):
                     ) / Decimal(self.h + self.b)
 
                     sol[t] = Decimal(
-                        norm.ppf(q=np.float64(pr), mu=sum(l[: t + 1]))
+                        poisson.ppf(q=np.float64(pr), mu=sum(l[: t + 1]))
                     ) - Decimal(sum(sol[:t]))
                     if not np.isfinite(sol[t]):
                         return sol
