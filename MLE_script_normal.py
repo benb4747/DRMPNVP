@@ -29,9 +29,6 @@ def test_algorithms(inp):
         alpha,
     ) = inp
 
-    if T == 4:
-        solver_timeout *= 2
-
     headers = [
         index,
         rep,
