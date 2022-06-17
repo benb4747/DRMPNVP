@@ -265,10 +265,12 @@ else:
 
 inputs = repeated_inputs
 
-test_full = [
-    i for i in inputs if (i[names.index("T")], i[names.index("n_pts")]) != (4, 10)
-    and (i[names.index("T")], i[names.index("n_pts")]) != (3, 10)
-]
+#test_full = [
+ #   i for i in inputs if (i[names.index("T")], i[names.index("n_pts")]) != (4, 10)
+  #  and (i[names.index("T")], i[names.index("n_pts")]) != (3, 10)
+#]
+
+test_full = inputs
 
 continuing = False
 
