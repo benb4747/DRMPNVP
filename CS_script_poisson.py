@@ -11,8 +11,7 @@ def test_algorithms(inp):
         index,
         rep,
         num_reps,
-        mu_0,
-        sig_0,
+        lam_0,
         T,
         W,
         w,
@@ -32,8 +31,7 @@ def test_algorithms(inp):
         index,
         rep,
         num_reps,
-        mu_0,
-        sig_0,
+        lam_0,
         T,
         W,
         tuple(w),
@@ -48,10 +46,9 @@ def test_algorithms(inp):
         alpha,
     ]
 
-    dist = "normal"
-    omega_0 = (mu_0, sig_0)
+    dist = "Poisson"
     # construct MLEs and confidence set
-    X = demand_RV(dist, T, (mu_0, sig_0), N, seed=index * num_reps + rep)
+    X = demand_RV(dist, T, lam_0, N, seed=index * num_reps + rep)
     X.compute_mles()
     MLE_neg = np.any(np.array(X.mle) < 0)
     if MLE_neg:
@@ -122,7 +119,7 @@ def test_algorithms(inp):
         objs = [DRO_problem.cost_function(PWL_q, o) for o in AS.confidence_set_full]
         PWL_true_worst = AS.confidence_set_full[np.argmax(objs)]
         PWL_true_worst_obj = np.max(objs)
-        PWL_true_obj = np.round(DRO_problem.cost_function(PWL_q, omega_0), 5)
+        PWL_true_obj = np.round(DRO_problem.cost_function(PWL_q, lam_0), 5)
     else:
         PWL_obj = -1
         PWL_true_worst = PWL_worst
@@ -136,7 +133,7 @@ def test_algorithms(inp):
         objs = [DRO_problem.cost_function(CS_q, o) for o in AS.confidence_set_full]
         CS_true_worst = AS.confidence_set_full[np.argmax(objs)]
         CS_true_worst_obj = np.max(objs)
-        CS_true_obj = np.round(DRO_problem.cost_function(CS_q, omega_0), 5)
+        CS_true_obj = np.round(DRO_problem.cost_function(CS_q, lam_0), 5)
     else:
         CS_obj = -1
         CS_true_worst = CS_worst
@@ -172,7 +169,7 @@ def test_algorithms(inp):
     objs = [fd_problem.cost_function(fd_q, o) for o in AS.confidence_set_full]
     fd_true_worst = AS.confidence_set_full[np.argmax(objs)]
     fd_true_worst_obj = np.max(objs)
-    fd_true_obj = np.round(fd_problem.cost_function(fd_q, omega_0), 5)
+    fd_true_obj = np.round(fd_problem.cost_function(fd_q, lam_0), 5)
 
     with open(count_file, "a") as myfile:
         myfile.write("Finished solving input %s replication %s. \n" % (index, rep))
@@ -231,11 +228,8 @@ loop_cores = int(num_processors / gurobi_cores)
 timeout = 4 * 60 * 60
 
 T_vals = range(2, 5)
-# mu_0_range = range(3, 40)
-# sig_0_range = range(3, 15)
-mu_0_range = range(1, 21)
-sig_0_range = range(1, 11)
-num_omega0 = 3
+lam_0_range = range(1, 31)
+num_lam0 = 3
 
 PWL_gap_vals = list(reversed([0.1, 0.25, 0.5]))
 gap = PWL_gap_vals[int(sys.argv[1]) - 1]
@@ -246,27 +240,19 @@ b_range = list(100 * np.array(range(1, 3)))
 W_range = [4000, 4000, 8000]
 N_vals = [10, 25, 50]
 
-omega0_all = [
-    [
-        (m, s)
-        for (m, s) in mu_sig_combos(mu_0_range, sig_0_range, T_)
-        if np.all(np.array([s[t] <= m[t] / 3 for t in range(T_)]))
-    ]
-    for T_ in T_vals
-]
+# lam0_all = [mu_sig_combos(mu_0_range, sig_0_range, T_) for T_ in T_vals]
 
-# omega0_all = [mu_sig_combos(mu_0_range, sig_0_range, T_) for T_ in T_vals]
-
-omega0_vals = []
+lam0_vals = []
 for T_ in T_vals:
+    lam_range = [lam_0_range for t in range(T_)]
+    lam0_all = list(it.product(*lam_range))
     np.random.seed(T_vals.index(T_))
-    indices = np.random.choice(range(len(omega0_all[T_vals.index(T_)])), num_omega0)
-    omega0_vals.append([omega0_all[T_vals.index(T_)][i] for i in indices])
+    indices = np.random.choice(range(len(lam0_all[T_vals.index(T_)])), num_lam0)
+    lam0_vals.append([lam0_all[T_vals.index(T_)][i] for i in indices])
 
 inputs = [
     (
-        mu_0,
-        sig_0,
+        lam_0,
         T_,
         W_range[T_vals.index(T_)],
         w,
@@ -282,7 +268,7 @@ inputs = [
         0.05,
     )
     for T_ in T_vals
-    for (mu_0, sig_0) in omega0_vals[T_vals.index(T_)]
+    for lam_0 in lam0_vals[T_vals.index(T_)]
     for p in p_range
     for h in h_range
     for b in b_range
@@ -301,8 +287,7 @@ names = [
     "ind",
     "rep",
     "num_reps",
-    "mu_0",
-    "sig_0",
+    "lam_0",
     "T",
     "W",
     "w",

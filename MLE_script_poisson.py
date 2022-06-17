@@ -12,8 +12,7 @@ def test_algorithms(inp):
         index,
         rep,
         num_MLE,
-        mu_0,
-        sig_0,
+        lam_0,
         T,
         W,
         w,
@@ -29,15 +28,11 @@ def test_algorithms(inp):
         alpha,
     ) = inp
 
-    if T == 4:
-        solver_timeout *= 2
-
     headers = [
         index,
         rep,
         num_MLE,
-        mu_0,
-        sig_0,
+        lam_0,
         T,
         W,
         tuple(w),
@@ -52,10 +47,9 @@ def test_algorithms(inp):
         alpha,
     ]
 
-    dist = "normal"
-    omega_0 = (mu_0, sig_0)
+    dist = "Poisson"
     # construct MLEs and confidence set
-    X = demand_RV(dist, T, omega_0, N, seed=index * num_MLE + rep)
+    X = demand_RV(dist, T, lam_0, N, seed=index * num_reps + rep)
     X.compute_mles()
     MLE_neg = np.any(np.array(X.mle) < 0)
     if MLE_neg:
@@ -72,19 +66,19 @@ def test_algorithms(inp):
     PWL_MLE_sol = DRO_problem.PWL_solve([X.mle])
     PWL_MLE_q, PWL_MLE_obj, PWL_MLE_worst, PWL_MLE_tt, PWL_MLE_TO = PWL_MLE_sol
     PWL_MLE_obj = DRO_problem.cost_function(PWL_MLE_q, PWL_MLE_worst)
-    PWL_MLE_true_obj = np.round(DRO_problem.cost_function(PWL_MLE_q, omega_0), 5)
+    PWL_MLE_true_obj = np.round(DRO_problem.cost_function(PWL_MLE_q, lam_0), 5)
 
-    # PWL solution for omega_0
-    PWL_omega0_sol = DRO_problem.PWL_solve([omega_0])
+    # PWL solution for lam_0
+    PWL_lam0_sol = DRO_problem.PWL_solve([lam_0])
     (
-        PWL_omega0_q,
-        PWL_omega0_obj,
-        PWL_omega0_worst,
-        PWL_omega0_tt,
-        PWL_omega0_TO,
-    ) = PWL_omega0_sol
-    PWL_omega0_obj = DRO_problem.cost_function(PWL_omega0_q, PWL_omega0_worst)
-    PWL_omega0_true_obj = np.round(DRO_problem.cost_function(PWL_omega0_q, omega_0), 5)
+        PWL_lam0_q,
+        PWL_lam0_obj,
+        PWL_lam0_worst,
+        PWL_lam0_tt,
+        PWL_lam0_TO,
+    ) = PWL_lam0_sol
+    PWL_lam0_obj = DRO_problem.cost_function(PWL_lam0_q, PWL_lam0_worst)
+    PWL_lam0_true_obj = np.round(DRO_problem.cost_function(PWL_lam0_q, lam_0), 5)
 
     # Alfares solution for MLE distribution
     fd_MLE_problem = MPNVP(
@@ -109,10 +103,10 @@ def test_algorithms(inp):
     e = time.perf_counter()
     fd_MLE_tt = np.round(e - s, 3)
     fd_MLE_obj = fd_MLE_problem.cost_function(fd_MLE_q, X.mle)
-    fd_MLE_true_obj = np.round(fd_MLE_problem.cost_function(fd_MLE_q, omega_0), 5)
+    fd_MLE_true_obj = np.round(fd_MLE_problem.cost_function(fd_MLE_q, lam_0), 5)
 
-    # Alfares solution for omega_0
-    fd_omega0_problem = MPNVP(
+    # Alfares solution for lam_0
+    fd_lam0_problem = MPNVP(
         T,
         W,
         w,
@@ -123,42 +117,42 @@ def test_algorithms(inp):
         solver_timeout,
         solver_cores,
         dist,
-        omega_0,
+        lam_0,
         budget_tol=1e-6,
         tau=0.5,
         alpha_min=1e-100,
         alpha_init=0.1,
     )
     s = time.perf_counter()
-    fd_omega0_q = fd_omega0_problem.alfares_solve()
+    fd_lam0_q = fd_lam0_problem.alfares_solve()
     e = time.perf_counter()
-    fd_omega0_tt = np.round(e - s, 3)
-    fd_omega0_obj = fd_omega0_problem.cost_function(fd_omega0_q, omega_0)
-    fd_omega0_true_obj = np.round(
-        fd_omega0_problem.cost_function(fd_omega0_q, omega_0), 5
+    fd_lam0_tt = np.round(e - s, 3)
+    fd_lam0_obj = fd_lam0_problem.cost_function(fd_lam0_q, lam_0)
+    fd_lam0_true_obj = np.round(
+        fd_lam0_problem.cost_function(fd_lam0_q, lam_0), 5
     )
 
     with open(count_file, "a") as myfile:
         myfile.write("Finished solving input %s replication %s. \n" % (index, rep))
 
     res_list = headers + [
-        tuple(np.round(PWL_omega0_q, 3)),
-        tuple([tuple(i) for i in np.round(PWL_omega0_worst, 3)]),
-        np.round(PWL_omega0_obj, 5),
-        PWL_omega0_tt,
-        int(PWL_omega0_TO),
-        PWL_omega0_true_obj,
+        tuple(np.round(PWL_lam0_q, 3)),
+        tuple([tuple(i) for i in np.round(PWL_lam0_worst, 3)]),
+        np.round(PWL_lam0_obj, 5),
+        PWL_lam0_tt,
+        int(PWL_lam0_TO),
+        PWL_lam0_true_obj,
         tuple(np.round(PWL_MLE_q, 3)),
         tuple([tuple(i) for i in np.round(PWL_MLE_worst, 3)]),
         np.round(PWL_MLE_obj, 5),
         PWL_MLE_tt,
         int(PWL_MLE_TO),
         PWL_MLE_true_obj,
-        tuple(np.round(fd_omega0_q, 3)),
+        tuple(np.round(fd_lam0_q, 3)),
         tuple([tuple(i) for i in np.round(X.mle, 3)]),
-        np.round(fd_omega0_obj, 5),
-        fd_omega0_tt,
-        fd_omega0_true_obj,
+        np.round(fd_lam0_obj, 5),
+        fd_lam0_tt,
+        fd_lam0_true_obj,
         tuple(np.round(fd_MLE_q, 3)),
         tuple([tuple(i) for i in np.round(X.mle, 3)]),
         np.round(fd_MLE_obj, 5),
@@ -192,42 +186,30 @@ loop_cores = int(num_processors / gurobi_cores)
 timeout = 4 * 60 * 60
 
 T_vals = range(2, 5)
-# mu_0_range = range(3, 40)
-# sig_0_range = range(3, 15)
-mu_0_range = range(1, 21)
-sig_0_range = range(1, 11)
-num_omega0 = 3
+lam_0_range = range(1, 31)
+num_lam0 = 3
 
 PWL_gap_vals = list(reversed([0.1, 0.25, 0.5]))
 disc_pts_vals = [3, 5, 10]
-#M = disc_pts_vals[int(sys.argv[1]) - 1]
 p_range = list(100 * np.array(range(1, 3)))
 h_range = list(100 * np.array(range(1, 3)))
 b_range = list(100 * np.array(range(1, 3)))
 W_range = [4000, 4000, 8000]
 N_vals = [10, 25, 50]
 
-omega0_all = [
-    [
-        (m, s)
-        for (m, s) in mu_sig_combos(mu_0_range, sig_0_range, T_)
-        if np.all(np.array([s[t] <= m[t] / 3 for t in range(T_)]))
-    ]
-    for T_ in T_vals
-]
+# lam0_all = [mu_sig_combos(mu_0_range, sig_0_range, T_) for T_ in T_vals]
 
-# omega0_all = [mu_sig_combos(mu_0_range, sig_0_range, T_) for T_ in T_vals]
-
-omega0_vals = []
+lam0_vals = []
 for T_ in T_vals:
+    lam_range = [lam_0_range for t in range(T_)]
+    lam0_all = list(it.product(*lam_range))
     np.random.seed(T_vals.index(T_))
-    indices = np.random.choice(range(len(omega0_all[T_vals.index(T_)])), num_omega0)
-    omega0_vals.append([omega0_all[T_vals.index(T_)][i] for i in indices])
+    indices = np.random.choice(range(len(lam0_all[T_vals.index(T_)])), num_lam0)
+    lam0_vals.append([lam0_all[T_vals.index(T_)][i] for i in indices])
 
 inputs = [
     (
-        mu_0,
-        sig_0,
+        lam_0,
         T_,
         W_range[T_vals.index(T_)],
         w,
@@ -243,7 +225,7 @@ inputs = [
         0.05,
     )
     for T_ in T_vals
-    for (mu_0, sig_0) in omega0_vals[T_vals.index(T_)]
+    for lam_0 in lam0_vals[T_vals.index(T_)]
     for p in p_range
     for h in h_range
     for b in b_range
@@ -262,8 +244,7 @@ names = [
     "ind",
     "rep",
     "num_MLE",
-    "mu_0",
-    "sig_0",
+    "lam_0",
     "T",
     "W",
     "w",
@@ -278,23 +259,23 @@ names = [
     "alpha",
     "num_dists_full",
     "num_dists_reduced",
-    "PWL_omega0_q",
-    "PWL_omega0_worst",
-    "PWL_omega0_obj",
-    "PWL_omega0_tt",
-    "PWL_omega0_TO",
-    "PWL_omega0_true_obj",
+    "PWL_lam0_q",
+    "PWL_lam0_worst",
+    "PWL_lam0_obj",
+    "PWL_lam0_tt",
+    "PWL_lam0_TO",
+    "PWL_lam0_true_obj",
     "PWL_MLE_q",
     "PWL_MLE_worst",
     "PWL_MLE_obj",
     "PWL_MLE_tt",
     "PWL_MLE_TO",
     "PWL_MLE_true_obj",
-    "fd_omega0_q",
-    "fd_omega0_worst",
-    "fd_omega0_obj",
-    "fd_omega0_tt",
-    "fd_omega0_true_obj",
+    "fd_lam0_q",
+    "fd_lam0_worst",
+    "fd_lam0_obj",
+    "fd_lam0_tt",
+    "fd_lam0_true_obj",
     "fd_MLE_q",
     "fd_MLE_worst",
     "fd_MLE_obj",
@@ -317,7 +298,7 @@ if num_reps > 1:
         else:
             inps = [i for i in inputs if i[3] == T_][:num_instances]
         for rep in range(num_reps):
-            repeated_inputs += [tuple([i[0], rep, num_MLE] + list(i)[1:]) for i in inps]
+            repeated_inputs += [tuple([i[0], rep, num_reps] + list(i)[1:]) for i in inps]
 else:
     results_file = "results_MLE.txt"
     count_file = "count_MLE.txt"
