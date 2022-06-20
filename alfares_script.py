@@ -166,7 +166,7 @@ continuing = True
 
 if continuing:
     df = read_results("fast_alfares_results.txt")
-    done = [i for i in test if i[0] not in list(df.ind)]
+    test = [i for i in test if i[0] not in list(df.ind)]
     with open("fast_alfares_count.txt", "a") as myfile:
         myfile.write("About to start solving the %s instances.\
         that did not solve before.\n" %len(test))
