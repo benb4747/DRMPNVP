@@ -70,8 +70,8 @@ class ambiguity_set:
             lam_hat = self.demand.mle
             CIs = [
                 (
-                    lam_hat[t] - z * (lam_hat[t] / np.sqrt(N)),
-                    lam_hat[t] + z * (lam_hat[t] / np.sqrt(N)),
+                    lam_hat[t] - z * np.sqrt(lam_hat[t] / N),
+                    lam_hat[t] + z * np.sqrt(lam_hat[t] / N)
                 )
                 for t in range(self.demand.T)
             ]

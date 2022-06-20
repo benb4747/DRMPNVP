@@ -108,7 +108,7 @@ class DRMPNVP:
                 sum([mu[k] - q[k] for k in range(t + 1)]) / s[t] for t in range(self.T)
             ]
             PWL_NL_part = [
-                self.PWL_NLpart(omega, alpha[t], alpha_pts, t) for t in range(self.T)
+                self.PWL_NLpart(omega, alpha[t], alpha_pts[t], t) for t in range(self.T)
             ]
             obj = sum([PWL_NL_part[t] + self.w[t] * q[t] for t in range(self.T)])
             return obj
@@ -143,7 +143,6 @@ class DRMPNVP:
         env.setParam("LogToConsole", 0)
         env.setParam("Threads", self.solver_cores)
         m = gp.Model(name="MPNVP_%s_day" % self.T, env=env)
-        q = m.addVars([t for t in range(self.T)], vtype=GRB.CONTINUOUS, name="q")
         dummy = m.addVar(vtype=GRB.CONTINUOUS, name="dummy", lb=-GRB.INFINITY)
         NL_part = m.addVars(
             [(i, t) for i in range(len(ambiguity_set)) for t in range(self.T)],
@@ -153,6 +152,7 @@ class DRMPNVP:
         )
         enable_print()
         if self.dist in ["normal", "Normal"]:
+            q = m.addVars([t for t in range(self.T)], vtype=GRB.CONTINUOUS, name="q")
             alpha = m.addVars(
                 [(i, t) for i in range(len(ambiguity_set)) for t in range(self.T)],
                 vtype=GRB.CONTINUOUS,
@@ -237,6 +237,7 @@ class DRMPNVP:
                 var = [q, alpha, dummy, NL_part]
 
         elif self.dist in ["Poisson", "poisson"]:
+            q = m.addVars([t for t in range(self.T)], vtype=GRB.INTEGER, name="q")
             Q = m.addVars(range(self.T))
             m.addConstrs(
                 Q[t] == gp.quicksum(q[k] for k in range(t + 1)) for t in range(self.T)
@@ -251,7 +252,7 @@ class DRMPNVP:
                 if tt >= self.timeout:
                     TO = True
                     q_sol = tuple(self.T * [-1])
-                    worst = tuple([tuple(self.T * [-1]), tuple(self.T * [-1])])
+                    worst = tuple(self.T * [-1])
                     obj = 0
                     del m
                     return [
