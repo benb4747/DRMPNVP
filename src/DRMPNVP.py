@@ -97,9 +97,34 @@ class DRMPNVP:
             omega, alpha_pts[ind + 1], t
         )
 
-    def PWL_obj(self, q, omega, alpha_pts):
+    def PWL_obj(self, q, omega):
         if self.dist in ["normal", "Normal"]:
             mu, sig = omega
+            alpha_min = np.array(
+                [
+                    sum([mu[k] - (self.W / self.w[k]) for k in range(t + 1)])
+                    / np.sqrt(sum([sig[k] ** 2 for k in range(t + 1)]))
+                    for t in range(self.T)
+                ]
+            )
+            alpha_max = np.array(
+                [
+                    sum([mu[k] for k in range(t + 1)])
+                    / np.sqrt(sum([sig[k] ** 2 for k in range(t + 1)]))
+                    for t in range(self.T)
+                ]
+            )
+            alpha_pts = np.array(
+                [
+                    np.arange(
+                        np.floor(alpha_min[t]),
+                        np.ceil(alpha_max[t]) + self.gap,
+                        self.gap,
+                    )
+                    for t in range(self.T)
+                ]
+            )
+
             s = [
                 np.sqrt(np.sum([sig[k] ** 2 for k in range(t + 1)]))
                 for t in range(self.T)
@@ -110,15 +135,20 @@ class DRMPNVP:
             PWL_NL_part = [
                 self.PWL_NLpart(omega, alpha[t], alpha_pts[t], t) for t in range(self.T)
             ]
-            obj = sum([PWL_NL_part[t] + self.w[t] * q[t] for t in range(self.T)])
+            obj = sum([PWL_NL_part[t] + self.w[t] * q[t] - self.p * mu[t] 
+                       for t in range(self.T)])
             return obj
 
         elif self.dist in ["poisson", "Poisson"]:
             lam = omega
             Q = [sum([q[k] for k in range(t + 1)]) for t in range(self.T)]
             Lam = [sum([lam[k] for k in range(t + 1)]) for t in range(self.T)]
+            Q_pts = [
+                np.arange(0, sum([self.W / self.w[k] for k in range(t + 1)]), self.gap)
+                for t in range(self.T)
+            ]
             NL_part = [
-                self.PWL_NLpart(Lam[t], Q[t], alpha_pts[t], t) for t in range(self.T)
+                self.PWL_NLpart(Lam[t], Q[t], Q_pts[t], t) for t in range(self.T)
             ]
             obj = sum(
                 [
