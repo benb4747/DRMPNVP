@@ -285,8 +285,8 @@ num_reps = 1
 num_instances = "all"
 
 if num_reps > 1:
-    results_file = "results_MLE.txt"
-    count_file = "count_MLE.txt"
+    results_file = "results_MLE_poisson.txt"
+    count_file = "count_MLE_poisson.txt"
     repeated_inputs = []
     counter = 0
     for T_ in T_vals:
@@ -297,8 +297,8 @@ if num_reps > 1:
         for rep in range(num_reps):
             repeated_inputs += [tuple([i[0], rep, num_reps] + list(i)[1:]) for i in inps]
 else:
-    results_file = "results_MLE.txt"
-    count_file = "count_MLE.txt"
+    results_file = "results_MLE_poisson.txt"
+    count_file = "count_MLE_poisson.txt"
     inps = inputs
     repeated_inputs = [tuple([i[0], 0, 1] + list(i)[1:]) for i in inps]
 

@@ -274,8 +274,8 @@ if num_reps > 1:
                 tuple([i[0], rep, num_reps] + list(i)[1:]) for i in inps
             ]
 else:
-    results_file = "AS_results.txt"
-    count_file = "AS_count.txt"
+    results_file = "AS_results_normal.txt"
+    count_file = "AS_count_normal.txt"
     inps = inputs
     repeated_inputs = [tuple([i[0], 0, 1] + list(i)[1:]) for i in inps]
 
