@@ -4,6 +4,7 @@ from src.ambiguity_set import *
 from src.demand_RV import *
 from src.DRMPNVP import *
 from src.MPNVP import *
+from src.functions import *
 from scipy.optimize import minimize
 
 def test_algorithms(inp):
@@ -161,12 +162,21 @@ names = ["ind", "p", "h", "b", "w", "T", "W", "mu", "sig", "budget_tol", "tau",
 
 test = inputs
 
-open('fast_alfares_count.txt', 'w').close()
-open('fast_alfares_results.txt', 'w').close()
-with open("fast_alfares_count.txt", "a") as myfile:
-    myfile.write("About to start solving %s  newsvendor instances. \n" %len(inputs))
-with open("fast_alfares_results.txt", "a") as myfile:
-    myfile.write(str(names) + "\n")
+continuing = True
+
+if continuing:
+    df = read_results("fast_alfares_results.txt")
+    done = [i for i in test if i[0] not in list(df.ind)]
+    with open("fast_alfares_count.txt", "a") as myfile:
+        myfile.write("About to start solving the %s instances.\
+        that did not solve before.\n" %len(test))
+else:
+    open('fast_alfares_count.txt', 'w').close()
+    open('fast_alfares_results.txt', 'w').close()
+    with open("fast_alfares_count.txt", "a") as myfile:
+        myfile.write("About to start solving %s  newsvendor instances. \n" %len(inputs))
+    with open("fast_alfares_results.txt", "a") as myfile:
+        myfile.write(str(names) + "\n")
     
 if __name__ ==  '__main__': 
     with Pool(processes=cores) as p:
