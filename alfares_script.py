@@ -12,9 +12,11 @@ def test_algorithms(inp):
     headers= [ind, p, h, b, tuple(np.round(w, 3)), T, W, mu, tuple(np.round(sig, 3)), budget_tol, tau]
 
     if dist == "normal":
+        PWL_gap = 0.1
         omega = (mu, sig)
     if dist == "poisson":
         omega = mu
+        PWL_gap = 1
 
     PWL_gap = 0.1
     timeout = 14400
@@ -87,7 +89,7 @@ def test_algorithms(inp):
     PWL_budget_gap = "{:.5e}".format(PWL_budget - W)
     t_PWL = np.round(PWL_tt, 3)
     
-    with open("fast_alfares_count.txt", "a") as myfile:
+    with open("small_alfares_count.txt", "a") as myfile:
         myfile.write("Finished input %s. \n" %ind)
     
     res_list = headers + [tuple(np.round(alfares_q, 5)), alfares_obj,
@@ -100,7 +102,7 @@ def test_algorithms(inp):
         PWL_budget_gap, t_PWL
         ]
 
-    with open("fast_alfares_results.txt", "a") as res_file:
+    with open("small_alfares_results.txt", "a") as res_file:
         res_file.write(str(res_list) + "\n")
 
     return res_list
@@ -112,31 +114,32 @@ def test_algorithms_mp(inp):
     try:
         return test_algorithms(inp)
     except Exception:
-        with open("fast_alfares_count.txt", "a") as res_file:
+        with open("small_alfares_count.txt", "a") as res_file:
             res_file.write("Input %s failed.\n" %ind)
         logging.exception("Input %s failed" % (ind))
         
         
 cores = 32
-p_range = range(1, 4)
-h_range = range(1, 4)
-b_range = range(1, 4)
-T_vals = range(3, 7)
+p_range = range(1, 3)
+h_range = range(1, 3)
+b_range = range(1, 3)
+T_vals = range(2, 6)
 w_vals = ([list(2 * np.array(list(reversed(range(1, T + 1))))) for T in T_vals] +
           [[1/t for t in range(1,T+1)] for T in T_vals] 
          )
-W_vals = [5, 10, 25, 50]
+W_vals = [10, 25, 50]
 mu_vals = []
 for T in T_vals:
     all_vals = (list(it.combinations_with_replacement([5, 10, 20], r=T)) 
         +  list(it.combinations_with_replacement([5, 10, 20], r=T)))
-    for mu in all_vals:
-        if mu not in mu_vals:
-            mu_vals.append(mu)
-        
+
+np.random.seed(2022)
+mu_indices = np.random.choice(range(len(all_vals)), 10)
+mu_vals = [all_vals[i] for i in mu_indices]
+
 sig_vals = [tuple(np.array(mu) / 4) for mu in mu_vals]
 budget_tols = [0, 1e-10]
-tau_vals = [0.75, 0.5, 0.25]
+tau_vals = [0.5, 0.25]
 inputs = [
     (dist, p, h, b, w, T, W, mu, tuple(np.array(mu) / 4), budget_tol, tau)
     for dist in ["normal", "poisson"]
@@ -162,20 +165,20 @@ names = ["ind", "p", "h", "b", "w", "T", "W", "mu", "sig", "budget_tol", "tau",
 
 test = inputs
 
-continuing = True
+continuing = False
 
 if continuing:
-    df = read_results("fast_alfares_results.txt")
+    df = read_results("small_alfares_results.txt")
     test = [i for i in test if i[0] not in list(df.ind)]
-    with open("fast_alfares_count.txt", "a") as myfile:
+    with open("small_alfares_count.txt", "a") as myfile:
         myfile.write("About to start solving the %s instances.\
         that did not solve before.\n" %len(test))
 else:
-    open('fast_alfares_count.txt', 'w').close()
-    open('fast_alfares_results.txt', 'w').close()
-    with open("fast_alfares_count.txt", "a") as myfile:
+    open('small_alfares_count.txt', 'w').close()
+    open('small_alfares_results.txt', 'w').close()
+    with open("small_alfares_count.txt", "a") as myfile:
         myfile.write("About to start solving %s  newsvendor instances. \n" %len(inputs))
-    with open("fast_alfares_results.txt", "a") as myfile:
+    with open("small_alfares_results.txt", "a") as myfile:
         myfile.write(str(names) + "\n")
     
 if __name__ ==  '__main__': 
