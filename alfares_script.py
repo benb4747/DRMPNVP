@@ -9,7 +9,7 @@ from scipy.optimize import minimize
 
 def test_algorithms(inp):
     ind, dist, p, h, b, w, T, W, mu, sig, budget_tol, tau = inp
-    headers= [ind, p, h, b, tuple(np.round(w, 3)), T, W, mu, tuple(np.round(sig, 3)), budget_tol, tau]
+    headers= [ind, dist, p, h, b, tuple(np.round(w, 3)), T, W, mu, tuple(np.round(sig, 3)), budget_tol, tau]
 
     if dist == "normal":
         PWL_gap = 0.1
@@ -129,13 +129,13 @@ w_vals = ([list(2 * np.array(list(reversed(range(1, T + 1))))) for T in T_vals] 
          )
 W_vals = [10, 25, 50]
 mu_vals = []
+mu_vals = []
 for T in T_vals:
     all_vals = (list(it.combinations_with_replacement([5, 10, 20], r=T)) 
         +  list(it.combinations_with_replacement([5, 10, 20], r=T)))
-
-np.random.seed(2022)
-mu_indices = np.random.choice(range(len(all_vals)), 10)
-mu_vals = [all_vals[i] for i in mu_indices]
+    np.random.seed(2022 + T_vals.index(T))
+    mu_indices = np.random.choice(range(len(all_vals)), 2)
+    mu_vals += [all_vals[i] for i in mu_indices]
 
 sig_vals = [tuple(np.array(mu) / 4) for mu in mu_vals]
 budget_tols = [0, 1e-10]
@@ -157,7 +157,7 @@ for i in range(len(inputs)):
     inputs[i] = tuple([i] + list(inputs[i]))
 num_inputs = len(inputs)
 
-names = ["ind", "p", "h", "b", "w", "T", "W", "mu", "sig", "budget_tol", "tau",
+names = ["ind", "dist", "p", "h", "b", "w", "T", "W", "mu", "sig", "budget_tol", "tau",
          "q_alf", "alf_obj", "alf_gap", "t_alf", "TC_q", "TC_obj", "TC_budget_gap", "t_TC",
         "SLSQP_q", "SLSQP_obj", "SLSQP_budget_gap", "t_SLSQP",
         "PWL_q", "PWL_obj", "PWL_budget_gap", "t_PWL"
