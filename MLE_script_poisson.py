@@ -186,10 +186,9 @@ loop_cores = int(num_processors / gurobi_cores)
 timeout = 4 * 60 * 60
 
 T_vals = range(2, 5)
-lam_0_range = range(1, 31)
-num_lam0 = 3
 
-PWL_gap_vals = list(reversed([0.1, 0.25, 0.5]))
+#PWL_gap_vals = list(reversed([0.1, 0.25, 0.5]))
+PWL_gap_vals = [1]
 disc_pts_vals = [3, 5, 10]
 p_range = list(100 * np.array(range(1, 3)))
 h_range = list(100 * np.array(range(1, 3)))
@@ -197,12 +196,19 @@ b_range = list(100 * np.array(range(1, 3)))
 W_range = [4000, 4000, 8000]
 N_vals = [10, 25, 50]
 
-# lam0_all = [mu_sig_combos(mu_0_range, sig_0_range, T_) for T_ in T_vals]
-
 with open("means.txt", "r") as f:
     lines = f.readlines()
     
 lam0_vals = [[eval(mu) for mu in lines if len(eval(mu)) == T] for T in T_vals]
+
+lam_0_range = list(range(5, 20))
+for T in T_vals:
+    lam0_all = list(it.product(*[lam_0_range for t in range(T)]))
+    np.random.seed(2022)
+    lam0_ind =  np.random.choice(range(len(lam0_all)), 6)
+    lam0_vals[T_vals.index(T)] += [lam0_all[i] for i in lam0_ind
+     if lam0_all[i] not in lam0_vals[T_vals.index(T)]
+    ]
 
 inputs = [
     (
@@ -297,8 +303,8 @@ if num_reps > 1:
         for rep in range(num_reps):
             repeated_inputs += [tuple([i[0], rep, num_reps] + list(i)[1:]) for i in inps]
 else:
-    results_file = "results_MLE_poisson.txt"
-    count_file = "count_MLE_poisson.txt"
+    results_file = "results_MLE_poisson1.txt"
+    count_file = "count_MLE_poisson1.txt"
     inps = inputs
     repeated_inputs = [tuple([i[0], 0, 1] + list(i)[1:]) for i in inps]
 

@@ -231,14 +231,15 @@ T_vals = range(2, 5)
 lam_0_range = range(1, 31)
 num_lam0 = 3
 
-PWL_gap_vals = list(reversed([0.1, 0.25, 0.5]))
-gap = PWL_gap_vals[int(sys.argv[1]) - 1]
+#PWL_gap_vals = list(reversed([0.1, 0.25, 0.5]))
+PWL_gap_vals = [1]
 disc_pts_vals = [3, 5, 10]
 p_range = list(100 * np.array(range(1, 3)))
 h_range = list(100 * np.array(range(1, 3)))
 b_range = list(100 * np.array(range(1, 3)))
 W_range = [4000, 4000, 8000]
 N_vals = [10, 25, 50]
+N = N_vals[int(sys.argv[1]) - 1]
 
 # lam0_all = [mu_sig_combos(mu_0_range, sig_0_range, T_) for T_ in T_vals]
 
@@ -246,6 +247,15 @@ with open("means.txt", "r") as f:
     lines = f.readlines()
     
 lam0_vals = [[eval(mu) for mu in lines if len(eval(mu)) == T] for T in T_vals]
+
+lam_0_range = list(range(5, 20))
+for T in T_vals:
+    lam0_all = list(it.product(*[lam_0_range for t in range(T)]))
+    np.random.seed(2022)
+    lam0_ind =  np.random.choice(range(len(lam0_all)), 6)
+    lam0_vals[T_vals.index(T)] += [lam0_all[i] for i in lam0_ind
+     if lam0_all[i] not in lam0_vals[T_vals.index(T)]
+    ]
 
 inputs = [
     (
@@ -261,7 +271,7 @@ inputs = [
         0.001,
         timeout,
         gurobi_cores,
-        N,
+        N_,
         0.05,
     )
     for T_ in T_vals
@@ -270,7 +280,7 @@ inputs = [
     for h in h_range
     for b in b_range
     for PWL_gap in PWL_gap_vals
-    for N in N_vals
+    for N_ in N_vals
     for n_pts in disc_pts_vals
     for w in [list(100 * np.array(range(1, T_ + 1))[::-1])]
     if b > max([w[t] - w[t + 1] for t in range(T_ - 1)])
@@ -341,8 +351,8 @@ if num_reps > 1:
                 tuple([i[0], rep, num_reps] + list(i)[1:]) for i in inps
             ]
 else:
-    results_file = "results_poisson.txt"
-    count_file = "count_poisson.txt"
+    results_file = "results_poisson1.txt"
+    count_file = "count_poisson1.txt"
     inps = inputs
     repeated_inputs = [tuple([i[0], 0, 1] + list(i)[1:]) for i in inps]
 
@@ -355,7 +365,7 @@ inputs = repeated_inputs
 
 test_full = inputs
 
-continuing = True
+continuing = False
 
 if continuing:
     file1 = open(results_file, "r")
@@ -401,7 +411,7 @@ else:
     test = test_full
 
 #if T == 2 and continuing:
-if gap == 0.1 and continuing:
+if N == 10 and continuing:
     with open(count_file, "a") as myfile:
         myfile.write(
             "About to start solving the %s instances that didn't finish solving before. \n"
@@ -409,18 +419,18 @@ if gap == 0.1 and continuing:
         )
 
 #test = [i for i in test if i[names.index("T")] == T]
-test = [i for i in test if i[names.index("PWL_gap")] == gap]
+test = [i for i in test if i[15] == N]
 
 
 # wipes results file
 #if T == 2 and not continuing:
-if gap == 0.1 and not continuing:
+if N == 10 and not continuing:
     open(count_file, "w").close()
     open(results_file, "w").close()
     with open(count_file, "a") as myfile:
         myfile.write(
             "About to start solving %s instances with the repeated sampling approach. \n"
-            % len(test)
+            % len(test_full)
         )
     with open(results_file, "a") as myfile:
         myfile.write(str(names) + "\n")
