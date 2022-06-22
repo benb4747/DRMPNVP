@@ -144,7 +144,7 @@ class DRMPNVP:
             Q = [sum([q[k] for k in range(t + 1)]) for t in range(self.T)]
             Lam = [sum([lam[k] for k in range(t + 1)]) for t in range(self.T)]
             Q_pts = [
-                np.arange(0, sum([self.W / self.w[k] for k in range(t + 1)]), self.gap)
+                np.arange(0, sum([self.W / self.w[k] for k in range(t + 1)]) + self.gap, self.gap)
                 for t in range(self.T)
             ]
             NL_part = [
