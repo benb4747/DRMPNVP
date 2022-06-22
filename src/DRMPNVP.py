@@ -274,7 +274,7 @@ class DRMPNVP:
             )
 
             Q_pts = [
-                np.arange(0, sum([self.W / self.w[k] for k in range(t + 1)]), self.gap)
+                np.arange(0, sum([self.W / self.w[k] for k in range(t + 1)]) + self.gap, self.gap)
                 for t in range(self.T)
             ]
             for i in range(len(ambiguity_set)):

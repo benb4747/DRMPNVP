@@ -303,8 +303,8 @@ if num_reps > 1:
         for rep in range(num_reps):
             repeated_inputs += [tuple([i[0], rep, num_reps] + list(i)[1:]) for i in inps]
 else:
-    results_file = "results_MLE_poisson1.txt"
-    count_file = "count_MLE_poisson1.txt"
+    results_file = "results_MLE_poisson_gap.txt"
+    count_file = "count_MLE_poisson_gap.txt"
     inps = inputs
     repeated_inputs = [tuple([i[0], 0, 1] + list(i)[1:]) for i in inps]
 
