@@ -89,7 +89,7 @@ def test_algorithms(inp):
     PWL_budget_gap = "{:.5e}".format(PWL_budget - W)
     t_PWL = np.round(PWL_tt, 3)
     
-    with open("small_alfares_count.txt", "a") as myfile:
+    with open("alfares_count.txt", "a") as myfile:
         myfile.write("Finished input %s. \n" %ind)
     
     res_list = headers + [tuple(np.round(alfares_q, 5)), alfares_obj,
@@ -102,7 +102,7 @@ def test_algorithms(inp):
         PWL_budget_gap, t_PWL
         ]
 
-    with open("small_alfares_results.txt", "a") as res_file:
+    with open("alfares_results.txt", "a") as res_file:
         res_file.write(str(res_list) + "\n")
 
     return res_list
@@ -114,7 +114,7 @@ def test_algorithms_mp(inp):
     try:
         return test_algorithms(inp)
     except Exception:
-        with open("small_alfares_count.txt", "a") as res_file:
+        with open("final_alfares_count.txt", "a") as res_file:
             res_file.write("Input %s failed.\n" %ind)
         logging.exception("Input %s failed" % (ind))
         
@@ -168,17 +168,17 @@ test = inputs
 continuing = False
 
 if continuing:
-    df = read_results("small_alfares_results.txt")
+    df = read_results("final_alfares_results.txt")
     test = [i for i in test if i[0] not in list(df.ind)]
-    with open("small_alfares_count.txt", "a") as myfile:
+    with open("final_alfares_count.txt", "a") as myfile:
         myfile.write("About to start solving the %s instances.\
         that did not solve before.\n" %len(test))
 else:
-    open('small_alfares_count.txt', 'w').close()
-    open('small_alfares_results.txt', 'w').close()
-    with open("small_alfares_count.txt", "a") as myfile:
+    open('final_alfares_count.txt', 'w').close()
+    open('final_alfares_results.txt', 'w').close()
+    with open("final_alfares_count.txt", "a") as myfile:
         myfile.write("About to start solving %s  newsvendor instances. \n" %len(inputs))
-    with open("small_alfares_results.txt", "a") as myfile:
+    with open("final_alfares_results.txt", "a") as myfile:
         myfile.write(str(names) + "\n")
     
 if __name__ ==  '__main__': 

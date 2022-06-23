@@ -365,7 +365,7 @@ inputs = repeated_inputs
 
 test_full = inputs
 
-continuing = False
+continuing = True
 
 if continuing:
     file1 = open(results_file, "r")
