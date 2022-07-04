@@ -351,8 +351,8 @@ if num_reps > 1:
                 tuple([i[0], rep, num_reps] + list(i)[1:]) for i in inps
             ]
 else:
-    results_file = "results_poisson_gap.txt"
-    count_file = "count_poisson_gap.txt"
+    results_file = "results_poisson_chi.txt"
+    count_file = "count_poisson_chi.txt"
     inps = inputs
     repeated_inputs = [tuple([i[0], 0, 1] + list(i)[1:]) for i in inps]
 
@@ -365,7 +365,7 @@ inputs = repeated_inputs
 
 test_full = inputs
 
-continuing = True
+continuing = False
 
 if continuing:
     file1 = open(results_file, "r")

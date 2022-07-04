@@ -19,7 +19,8 @@ class ambiguity_set:
         if self.demand.dist in ["normal", "Normal"]:
             start = time.perf_counter()
             omega_0 = self.demand.omega_0
-            z = norm.ppf(1 - self.alpha / 2)
+            #z = norm.ppf(1 - self.alpha / 2)
+            z = np.sqrt(chi2.ppf(q=1 - self.alpha, df=2 * self.demand.T))
             N = self.demand.N
             omega_hat = self.demand.mle
             mu_hat, sig_hat = omega_hat
@@ -65,7 +66,8 @@ class ambiguity_set:
         elif self.demand.dist in ["Poisson", "poisson"]:
             start = time.perf_counter()
             lam_0 = self.demand.omega_0
-            z = norm.ppf(1 - self.alpha / 2)
+            #z = norm.ppf(1 - self.alpha / 2)
+            z = np.sqrt(chi2.ppf(q=1 - self.alpha, df=self.demand.T))
             N = self.demand.N
             lam_hat = self.demand.mle
             CIs = [

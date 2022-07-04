@@ -359,8 +359,8 @@ if num_reps > 1:
                 tuple([i[0], rep, num_reps] + list(i)[1:]) for i in inps
             ]
 else:
-    results_file = "results_normal.txt"
-    count_file = "count_normal.txt"
+    results_file = "results_normal_chi.txt"
+    count_file = "count_normal_chi.txt"
     inps = inputs
     repeated_inputs = [tuple([i[0], 0, 1] + list(i)[1:]) for i in inps]
 
@@ -368,10 +368,11 @@ inputs = repeated_inputs
 
 test_full = [
     i for i in inputs if (i[names.index("T")], i[names.index("n_pts")]) != (4, 10)
-    and (i[names.index("T")], i[names.index("n_pts")]) != (3, 10)
 ]
 
-continuing = False
+#test_full = inputs
+
+continuing = True
 
 if continuing:
     file1 = open(results_file, "r")
