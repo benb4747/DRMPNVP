@@ -6,6 +6,7 @@ from scipy.stats import chi2, norm, poisson
 import gurobipy as gp
 from gurobipy import GRB
 import time
+from scipy.optimize import minimize
 
 
 class DRMPNVP:
@@ -135,8 +136,12 @@ class DRMPNVP:
             PWL_NL_part = [
                 self.PWL_NLpart(omega, alpha[t], alpha_pts[t], t) for t in range(self.T)
             ]
-            obj = sum([PWL_NL_part[t] + self.w[t] * q[t] - self.p * mu[t] 
-                       for t in range(self.T)])
+            obj = sum(
+                [
+                    PWL_NL_part[t] + self.w[t] * q[t] - self.p * mu[t]
+                    for t in range(self.T)
+                ]
+            )
             return obj
 
         elif self.dist in ["poisson", "Poisson"]:
@@ -144,7 +149,11 @@ class DRMPNVP:
             Q = [sum([q[k] for k in range(t + 1)]) for t in range(self.T)]
             Lam = [sum([lam[k] for k in range(t + 1)]) for t in range(self.T)]
             Q_pts = [
-                np.arange(0, sum([self.W / self.w[k] for k in range(t + 1)]) + self.gap, self.gap)
+                np.arange(
+                    0,
+                    sum([self.W / self.w[k] for k in range(t + 1)]) + self.gap,
+                    self.gap,
+                )
                 for t in range(self.T)
             ]
             NL_part = [
@@ -220,7 +229,7 @@ class DRMPNVP:
                         )
                         for t in range(self.T)
                     ]
-                    for i in range(len(ambiguity_set))
+                    for i in range(alpha_min.shape[0])
                 ]
             )
 
@@ -274,7 +283,11 @@ class DRMPNVP:
             )
 
             Q_pts = [
-                np.arange(0, sum([self.W / self.w[k] for k in range(t + 1)]) + self.gap, self.gap)
+                np.arange(
+                    0,
+                    sum([self.W / self.w[k] for k in range(t + 1)]) + self.gap,
+                    self.gap,
+                )
                 for t in range(self.T)
             ]
             for i in range(len(ambiguity_set)):
@@ -374,7 +387,105 @@ class DRMPNVP:
 
         return [q_sol, obj, worst, tt, TO]
 
-    def CS_solve(self, omega_0, verbose=False, eps=0.01):
+    def profit_function(self, omega, q):
+        if self.dist == "normal":
+            mu = omega[: int(len(omega) / 2)]
+            sig = omega[int(len(omega) / 2) :]
+            s = [
+                np.sqrt(np.sum([sig[k] ** 2 for k in range(t + 1)]))
+                for t in range(self.T)
+            ]
+
+            alpha = [
+                sum([mu[k] - q[k] for k in range(t + 1)]) / s[t] for t in range(self.T)
+            ]
+
+            obj = sum(
+                [
+                    (
+                        (self.a[t] * norm.cdf(alpha[t]) - self.h)
+                        * sum([mu[k] - q[k] for k in range(t + 1)])
+                        + self.a[t] * norm.pdf(alpha[t]) * s[t]
+                        + q[t] * self.w[t]
+                        - self.p * mu[t]
+                    )
+                    for t in range(self.T)
+                ]
+            )
+            return -1 * obj
+
+        elif self.dist in ["Poisson", "poisson"]:
+            lam = omega
+            Q = [sum(q[: t + 1]) for t in range(self.T)]
+            Lam = [sum(lam[: t + 1]) for t in range(self.T)]
+            obj = sum(
+                [
+                    Q[t] * self.a[t] * poisson.cdf(Q[t], Lam[t])
+                    - Lam[t] * self.a[t] * poisson.cdf(Q[t] - 1, Lam[t])
+                    + (self.b + self.p * int(t == self.T - 1)) * (Lam[t] - Q[t])
+                    + q[t] * self.w[t]
+                    - self.p * lam[t]
+                    for t in range(self.T)
+                ]
+            )
+            return -1 * obj
+
+    def DSP(self, q_k, N, MLE):
+        if self.dist == "normal":
+            chi = chi2.ppf(q=1 - self.AS.alpha, df=2 * self.T)
+            mu_hat, sig_hat = MLE
+            res = minimize(
+                self.profit_function,
+                x0=2 * self.T * [0],
+                args=(q_k,),
+                bounds=2 * self.T * [(0.001, None)],
+                method="SLSQP",
+                constraints=(
+                    {
+                        "type": "ineq",
+                        "fun": lambda x: chi
+                        - sum(
+                            [
+                                (N / sig_hat[t] ** 2) * (mu_hat[t] - x[t]) ** 2
+                                + 2
+                                * (N / sig_hat[t] ** 2)
+                                * (sig_hat[t] - x[self.T + t]) ** 2
+                                for t in range(self.T)
+                            ]
+                        ),
+                    }
+                ),
+            )
+            omega = (tuple(res.x[: self.T]), tuple(res.x[self.T :]))
+            obj = -res.fun
+            return omega, obj
+        elif self.dist == "poisson":
+            chi = chi2.ppf(q=1 - self.AS.alpha, df=self.T)
+            lam_hat = MLE
+            res = minimize(
+                self.profit_function,
+                x0=self.T * [0],
+                args=(q_k,),
+                bounds=self.T * [(0.001, None)],
+                method="SLSQP",
+                constraints=(
+                    {
+                        "type": "ineq",
+                        "fun": lambda x: chi
+                        - sum(
+                            [
+                                (N / lam_hat[t]) * (lam_hat[t] - x[t]) ** 2
+                                for t in range(self.T)
+                            ]
+                        ),
+                    }
+                ),
+            )
+            omega = tuple(res.x)
+            obj = -res.fun
+            return omega, obj
+
+    def CS_solve(self, omega_0, MLE=0, N=0, discrete=True, verbose=False, eps=0.01):
 
         s = time.perf_counter()
         Omega_k = [omega_0]
@@ -383,10 +494,11 @@ class DRMPNVP:
         Omega_ext = self.AS.extreme_distributions
 
         Q_k, T_k = [], []  # solutions and objectives
-        k_max = 10
+        k_max = 10000
         k = 0
         reason = ""
         while k < k_max:
+            print(len(Omega_k))
             # solve master problem
             tt = time.perf_counter() - s
             [m, var, t_build, TO] = self.build_model(Omega_k)
@@ -397,11 +509,14 @@ class DRMPNVP:
 
             # calculate using self.cost_function as objective of LP is only approximate
             t_k = self.cost_function(q_k, o_master)
-            C_q = [self.cost_function(q_k, omega) for omega in Omega_ext]
 
-            worst = np.argmax(C_q)
-            o_opt = Omega_ext[worst]
-            C_opt = C_q[worst]
+            if discrete:
+                C_q = [self.cost_function(q_k, omega) for omega in Omega_ext]
+                worst = np.argmax(C_q)
+                o_opt = Omega_ext[worst]
+                C_opt = C_q[worst]
+            else:
+                o_opt, C_opt = self.DSP(q_k, N, MLE)
 
             if verbose:
                 print("----- Iteration %s -----\n" % k)
@@ -413,7 +528,7 @@ class DRMPNVP:
 
             Q_k.append(q_k)
             T_k.append(t_k)
-            repeat = list(o_opt) in Omega_k
+            repeat = o_opt in Omega_k
 
             tt = time.perf_counter() - s
             TO_new = tt > self.timeout
@@ -422,7 +537,7 @@ class DRMPNVP:
                 break
 
             if not repeat:
-                Omega_k.append(list(o_opt))
+                Omega_k.append(o_opt)
 
             else:
                 reason = "repeat"
@@ -442,3 +557,111 @@ class DRMPNVP:
         tt = np.round(e - s, 3)
         opt_sol = [Q_k[-1], o_opt, C_opt, tt]
         return opt_sol + [TO, reason]
+
+    def moment_based(self, MLE):
+        if self.dist in ["Normal", "normal"]:
+            mu = MLE[0]
+            v = MLE[1]
+        elif self.dist in ["Poisson", "poisson"]:
+            mu = MLE
+            v = MLE
+
+        M = [sum(mu[: (t + 1)]) for t in range(self.T)]
+        S = [sum(v[: (t + 1)]) for t in range(self.T)]
+        start = time.perf_counter()
+        TO = False
+        block_print()
+        env = gp.Env()
+        env.setParam("OutputFlag", 0)
+        env.setParam("LogToConsole", 0)
+        env.setParam("Threads", self.solver_cores)
+        m = gp.Model(name="moment_based", env=env)
+        enable_print()
+
+        q = m.addVars(range(self.T), name="q", lb=0)
+        z = m.addVars(range(self.T), name="z", lb=0)
+        Q = m.addVars(range(self.T), name="Q", lb=0)
+        Q_M = m.addVars(range(self.T), name="Q_M", lb=-GRB.INFINITY)
+        m.addConstrs(
+            Q[t] == gp.quicksum(q[k] for k in range(t + 1)) for t in range(self.T)
+        )
+        m.addConstrs(Q_M[t] == Q[t] - M[t] for t in range(self.T))
+        m.addConstrs(z[t] * z[t] >= S[t] + Q_M[t] * Q_M[t] for t in range(self.T))
+
+        m.addConstr(gp.quicksum(self.w[t] * q[t] for t in range(self.T)) <= self.W)
+
+        m.setObjective(
+            gp.quicksum(
+                0.5 * self.a[t] * z[t]
+                + 0.5 * (self.h - self.b - int(t == self.T) * self.p) * (Q[t] - M[t])
+                + self.w[t] * q[t]
+                - self.p * mu[t]
+                for t in range(self.T)
+            )
+        )
+
+        m.optimize()
+        q_sol = np.array((m.getAttr("x", q).values()))
+
+        return q_sol, m.ObjVal
+
+    def SAA(self, N, seed, omega):
+        if self.dist == "normal" or self.dist == "Normal":
+            mu, sig = omega
+            Sig = np.zeros((self.T, self.T))
+            for t in range(self.T):
+                Sig[t, t] = sig[t] ** 2
+            np.random.seed(seed)
+            samples = np.random.multivariate_normal(mean=mu, cov=Sig, size=N)
+
+        elif self.dist == "poisson" or self.dist == "Poisson":
+            lam = omega
+            np.random.seed(seed)
+            samples = np.random.poisson(lam=lam, size=(N, self.T))
+
+        TO = False
+        block_print()
+        env = gp.Env()
+        env.setParam("OutputFlag", 0)
+        env.setParam("LogToConsole", 0)
+        env.setParam("Threads", self.solver_cores)
+        m = gp.Model(name="SAA_%s_day" % self.T, env=env)
+        x = samples
+        q = m.addVars([t for t in range(self.T)], vtype=GRB.CONTINUOUS, name="q")
+
+        I_m = m.addVars([(n, t) for n in range(N) for t in range(self.T)], name="I_m")
+        I_p = m.addVars([(n, t) for n in range(N) for t in range(self.T)], name="I_p")
+
+        m.addConstrs(
+            I_p[n, t] >= gp.quicksum(q[j] - x[n, j] for j in range(t + 1))
+            for n in range(N)
+            for t in range(self.T)
+        )
+        m.addConstrs(
+            I_m[n, t] >= -gp.quicksum(q[j] - x[n, j] for j in range(t + 1))
+            for n in range(N)
+            for t in range(self.T)
+        )
+
+        m.setObjective(
+            (1 / N)
+            * (
+                gp.quicksum(
+                    self.p * I_m[n, self.T - 1]
+                    + gp.quicksum(
+                        self.h * I_p[n, t] + self.b * I_m[n, t] - self.p * x[n, t]
+                        for t in range(self.T)
+                    )
+                    for n in range(N)
+                )
+            ),
+            GRB.MINIMIZE,
+        )
+
+        m.addConstr(gp.quicksum(self.w[t] * q[t] for t in range(self.T)) <= self.W)
+
+        m.optimize()
+
+        q_sol = np.array((m.getAttr("x", q).values()))
+
+        return q_sol, m.ObjVal
