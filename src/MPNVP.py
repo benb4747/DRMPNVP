@@ -7,6 +7,7 @@ import numpy as np
 from decimal import Decimal, getcontext
 from scipy.stats import norm, poisson
 from math import log, exp
+from scipy.optimize import minimize
 
 
 class MPNVP(DRMPNVP):
@@ -193,14 +194,27 @@ class MPNVP(DRMPNVP):
                 ]
                 b_ = min([lam_UBs[i] for i in days])
 
-                alpha = Decimal(self.alpha_init)
+                # alpha = Decimal(self.alpha_init)
+                alpha = b_ - a
                 alpha_min = Decimal(self.alpha_min)
                 budget_tol = Decimal(self.budget_tol)
                 # lam = Decimal(a)
-                lam_next = lam
-                q_temp = self.KKT_solution(lam=lam)
-                q_next = q_temp
-                done = False
+
+                q_b = self.KKT_solution(lam=b_)
+                if not np.any(np.isnan(q_b)) and (
+                    min(q_b) < 0 and sum(q_b * self.w) > self.W
+                ):
+                    done = True
+                    q_temp = q_b
+                    q_next = q_b
+                    lam = b_
+                    lam_next = lam
+                else:
+                    done = False
+                    lam_next = lam
+                    q_temp = self.KKT_solution(lam=lam)
+                    q_next = q_temp
+
                 k = 0
                 while not done:
                     # this loop runs until alpha is as low as it can be and we have the first
@@ -254,7 +268,6 @@ class MPNVP(DRMPNVP):
                         done = True
 
                 q = q_next
-                # print(" - New sol: %s. Budget used: %s." %(q, sum(w * q)))
 
                 if np.any(np.isnan(q)):
                     break
@@ -304,3 +317,17 @@ class MPNVP(DRMPNVP):
         self.alfares_sol = q
 
         return q
+
+    def SLSQP_solve(self):
+        res = minimize(
+            self.cost_function,
+            x0=self.T * [0],
+            args=(self.omega,),
+            bounds=self.T * [(0, None)],
+            method="SLSQP",
+            constraints=({"type": "ineq", "fun": lambda x: self.W - sum(self.w * x)}),
+        )
+        q = res.x
+        obj = self.cost_function(q, self.omega)
+
+        return q, obj
