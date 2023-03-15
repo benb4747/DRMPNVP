@@ -51,67 +51,69 @@ def test_algorithms(inp):
     X = demand_RV(dist, T, lam_0, N, seed=index * num_reps + rep)
     X.compute_mles()
     MLE_neg = np.any(np.array(X.mle) < 0)
+    TO_flag = False
     if MLE_neg:
         for f in [count_file, results_file]:
             with open(f, "a") as myfile:
                 myfile.write("Input %s had negative MLEs. \n" % index)
             return
     AS = ambiguity_set(X, "confidence_set", alpha, n_pts, timeout)
-    s=time.perf_counter()
+    s = time.perf_counter()
     try:
         AS.construct_base_set()
     except MemoryError:
         AS.base_set = "T.O."
+        TO_flag = True
         for f in [count_file, results_file]:
             with open(f, "a") as myfile:
                 myfile.write(
                     "Input %s had MemoryError while constructing base AS. \n" % index
                 )
             return
-    e=time.perf_counter()
-    t_base = np.round(e-s, 3)
+    e = time.perf_counter()
+    t_base = np.round(e - s, 3)
 
-    if AS.base_set == "T.O.":
+    if AS.base_set == "T.O." and not TO_flag:
+        TO_flag = True
         for f in [count_file, results_file]:
             with open(f, "a") as myfile:
                 myfile.write(
                     "Input %s timed out while constructing base AS. \n" % index
                 )
-            return
 
-    s=time.perf_counter()
+    s = time.perf_counter()
     AS.construct_confidence_set()
-    if AS.confidence_set_full == "T.O.":
+    if AS.confidence_set_full == "T.O." and not TO_flag:
+        TO_flag = True
         for f in [count_file, results_file]:
             with open(f, "a") as myfile:
                 myfile.write(
                     "Input %s timed out while constructing confidence set. \n" % index
                 )
-            return
-    e=time.perf_counter()
-    t_conf = np.round(e-s, 3)
+    e = time.perf_counter()
+    t_conf = np.round(e - s, 3)
 
-    s=time.perf_counter()
+    s = time.perf_counter()
     AS.reduce()
-    if AS.reduced == "T.O.":
+    if AS.reduced == "T.O." and not TO_flag:
+        TO_flag = True
         for f in [count_file, results_file]:
             with open(f, "a") as myfile:
                 myfile.write("Input %s timed out while reducing set. \n" % index)
-            return
-    e=time.perf_counter()
-    t_reduce = np.round(e-s, 3)
+    e = time.perf_counter()
+    t_reduce = np.round(e - s, 3)
 
-    s=time.perf_counter()
+    s = time.perf_counter()
     AS.compute_extreme_distributions()
-    e=time.perf_counter()
-    t_ext = np.round(e-s, 3)
-    if AS.extreme_distributions == "T.O.":
+    e = time.perf_counter()
+    t_ext = np.round(e - s, 3)
+    if AS.extreme_distributions == "T.O." and not TO_flag:
+        TO_flag = True
         for f in [count_file, results_file]:
             with open(f, "a") as myfile:
                 myfile.write(
                     "Input %s timed out while constructing extreme set. \n" % index
                 )
-            return
 
     num_dists = len(AS.reduced)
     if num_dists <= 1:
@@ -134,7 +136,7 @@ def test_algorithms(inp):
         t_conf,
         t_reduce,
         t_ext,
-        AS_tt
+        AS_tt,
     ]
 
     with open(results_file, "a") as res_file:
@@ -156,7 +158,7 @@ def test_algorithms_mp(inp):
         logging.exception("Input %s failed on replication %s.\n" % (ind, rep))
 
 
-num_processors = 40
+num_processors = 32
 gurobi_cores = 4
 loop_cores = int(num_processors / gurobi_cores)
 timeout = 4 * 60 * 60
@@ -166,6 +168,7 @@ lam_0_range = range(1, 31)
 num_lam0 = 3
 
 PWL_gap_vals = list(reversed([0.1, 0.25, 0.5]))
+gap = PWL_gap_vals[int(sys.argv[1]) - 1]
 disc_pts_vals = [3, 5, 10]
 p_range = list(100 * np.array(range(1, 3)))
 h_range = list(100 * np.array(range(1, 3)))
@@ -177,7 +180,7 @@ N_vals = [10, 25, 50]
 
 with open("means.txt", "r") as f:
     lines = f.readlines()
-    
+
 lam0_vals = [[eval(mu) for mu in lines if len(eval(mu)) == T] for T in T_vals]
 
 inputs = [
@@ -237,11 +240,13 @@ names = [
     "t_conf",
     "t_reduce",
     "t_ext",
-    "t_total"
+    "t_total",
 ]
 
 num_reps = 1
 num_instances = 10
+
+sn = int(sys.argv[1])
 
 if num_reps > 1:
     results_file = "AS_results_reps.txt"
@@ -255,17 +260,17 @@ if num_reps > 1:
                 tuple([i[0], rep, num_reps] + list(i)[1:]) for i in inps
             ]
 else:
-    results_file = "AS_results_poisson.txt"
-    count_file = "AS_count_poisson.txt"
+    results_file = "AS_results_poisson_%s.txt" % sn
+    count_file = "AS_count_poisson_%s.txt" % sn
     inps = inputs
     repeated_inputs = [tuple([i[0], 0, 1] + list(i)[1:]) for i in inps]
 
 inputs = repeated_inputs
 
-#test_full = [
- #   i for i in inputs if (i[names.index("T")], i[names.index("n_pts")]) != (4, 10)
-  #  and (i[names.index("T")], i[names.index("n_pts")]) != (3, 10)
-#]
+# test_full = [
+#   i for i in inputs if (i[names.index("T")], i[names.index("n_pts")]) != (4, 10)
+#  and (i[names.index("T")], i[names.index("n_pts")]) != (3, 10)
+# ]
 
 test_full = inputs
 
@@ -314,6 +319,8 @@ if continuing:
 else:
     test = test_full
 
+test = [i for i in test if i[names.index("PWL_gap")] == gap]
+
 if continuing:
     with open(count_file, "a") as myfile:
         myfile.write(
@@ -328,12 +335,10 @@ if not continuing:
     open(count_file, "w").close()
     open(results_file, "w").close()
     with open(count_file, "a") as myfile:
-        myfile.write(
-            "About to start building %s ambiguity sets. \n"
-            % len(test_full)
-        )
-    with open(results_file, "a") as myfile:
-        myfile.write(str(names) + "\n")
+        myfile.write("About to start building %s ambiguity sets. \n" % len(test_full))
+    if sn == 1:
+        with open(results_file, "a") as myfile:
+            myfile.write(str(names) + "\n")
 
 
 if __name__ == "__main__":
