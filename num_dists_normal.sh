@@ -1,14 +1,15 @@
-#PBS -l ncpus=40
-#PBS -N ambiguity_sets_Normal
+#PBS -l ncpus=32
+#PBS -N AS_normal
 #PBS -o Output
 #PBS -j oe
 #PBS -m ae
 #PBS -M b.black1@lancaster.ac.uk
+#PBS -t 1-3
 
 # wherever the script is
 cd ~/PDRO_Newsvendor/
 ## Set num_threads to the same number as you set ncpus
-export num_threads=40
+export num_threads=32
 ### Make sure the following is before you run Rscript (or other language)
 ### One of these packages will control
 ### how many cores linear algebra uses up
