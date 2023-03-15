@@ -8,6 +8,7 @@
 #PBS -m e    # email when a job finishes
 #PBS -m b    # email when a job starts
 #PBS -M b.black1@lancaster.ac.uk
+#PBS -t 1-3
 
 # wherever the script is
 cd ~/PDRO_Newsvendor/
@@ -22,4 +23,4 @@ export MC_CORES=$num_threads ###Limits some packages in R
 export OMP_NUM_THREADS=$num_threads ### Limits OpenMP
 export NUMEXPR_NUM_THREADS=$num_threads ### Limits NUMEXR in p
 
-python3 alfares_script.py
+python3 alfares_script.py $PBS_ARRAYID
