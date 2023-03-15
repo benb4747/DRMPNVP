@@ -224,7 +224,7 @@ def test_algorithms_mp(inp):
         logging.exception("Input %s failed on replication %s.\n" % (ind, rep))
 
 
-#T = int(sys.argv[1]) + 1
+# T = int(sys.argv[1]) + 1
 num_processors = 32
 gurobi_cores = 4
 loop_cores = int(num_processors / gurobi_cores)
@@ -341,7 +341,7 @@ names = [
     "fd_true_worst_obj",
     "fd_tt",
     "fd_true_obj",
-    "MLE_neg"
+    "MLE_neg",
 ]
 
 num_reps = 1
@@ -370,7 +370,7 @@ test_full = [
     i for i in inputs if (i[names.index("T")], i[names.index("n_pts")]) != (4, 10)
 ]
 
-#test_full = inputs
+# test_full = inputs
 
 continuing = True
 
@@ -417,7 +417,7 @@ if continuing:
 else:
     test = test_full
 
-#if T == 2 and continuing:
+# if T == 2 and continuing:
 if gap == 0.1 and continuing:
     with open(count_file, "a") as myfile:
         myfile.write(
@@ -425,12 +425,12 @@ if gap == 0.1 and continuing:
             % len(test)
         )
 
-#test = [i for i in test if i[names.index("T")] == T]
+# test = [i for i in test if i[names.index("T")] == T]
 test = [i for i in test if i[names.index("PWL_gap")] == gap]
 
 
 # wipes results file
-#if T == 2 and not continuing:
+# if T == 2 and not continuing:
 if gap == 0.1 and not continuing:
     open(count_file, "w").close()
     open(results_file, "w").close()

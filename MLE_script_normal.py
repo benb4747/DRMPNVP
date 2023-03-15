@@ -197,7 +197,7 @@ num_omega0 = 3
 
 PWL_gap_vals = list(reversed([0.1, 0.25, 0.5]))
 disc_pts_vals = [3, 5, 10]
-#M = disc_pts_vals[int(sys.argv[1]) - 1]
+# M = disc_pts_vals[int(sys.argv[1]) - 1]
 p_range = list(100 * np.array(range(1, 3)))
 h_range = list(100 * np.array(range(1, 3)))
 b_range = list(100 * np.array(range(1, 3)))

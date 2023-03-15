@@ -221,7 +221,7 @@ def test_algorithms_mp(inp):
         logging.exception("Input %s failed on replication %s.\n" % (ind, rep))
 
 
-#T = int(sys.argv[1]) + 1
+# T = int(sys.argv[1]) + 1
 num_processors = 32
 gurobi_cores = 4
 loop_cores = int(num_processors / gurobi_cores)
@@ -231,7 +231,7 @@ T_vals = range(2, 5)
 lam_0_range = range(1, 31)
 num_lam0 = 3
 
-#PWL_gap_vals = list(reversed([0.1, 0.25, 0.5]))
+# PWL_gap_vals = list(reversed([0.1, 0.25, 0.5]))
 PWL_gap_vals = [1]
 disc_pts_vals = [3, 5, 10]
 p_range = list(100 * np.array(range(1, 3)))
@@ -245,16 +245,16 @@ N = N_vals[int(sys.argv[1]) - 1]
 
 with open("means.txt", "r") as f:
     lines = f.readlines()
-    
+
 lam0_vals = [[eval(mu) for mu in lines if len(eval(mu)) == T] for T in T_vals]
 
 lam_0_range = list(range(5, 20))
 for T in T_vals:
     lam0_all = list(it.product(*[lam_0_range for t in range(T)]))
     np.random.seed(2022)
-    lam0_ind =  np.random.choice(range(len(lam0_all)), 6)
-    lam0_vals[T_vals.index(T)] += [lam0_all[i] for i in lam0_ind
-     if lam0_all[i] not in lam0_vals[T_vals.index(T)]
+    lam0_ind = np.random.choice(range(len(lam0_all)), 6)
+    lam0_vals[T_vals.index(T)] += [
+        lam0_all[i] for i in lam0_ind if lam0_all[i] not in lam0_vals[T_vals.index(T)]
     ]
 
 inputs = [
@@ -333,7 +333,7 @@ names = [
     "fd_true_worst_obj",
     "fd_tt",
     "fd_true_obj",
-    "MLE_neg"
+    "MLE_neg",
 ]
 
 num_reps = 1
@@ -358,10 +358,10 @@ else:
 
 inputs = repeated_inputs
 
-#test_full = [
- #   i for i in inputs if (i[names.index("T")], i[names.index("n_pts")]) != (4, 10)
-  #  and (i[names.index("T")], i[names.index("n_pts")]) != (3, 10)
-#]
+# test_full = [
+#   i for i in inputs if (i[names.index("T")], i[names.index("n_pts")]) != (4, 10)
+#  and (i[names.index("T")], i[names.index("n_pts")]) != (3, 10)
+# ]
 
 test_full = inputs
 
@@ -410,7 +410,7 @@ if continuing:
 else:
     test = test_full
 
-#if T == 2 and continuing:
+# if T == 2 and continuing:
 if N == 10 and continuing:
     with open(count_file, "a") as myfile:
         myfile.write(
@@ -418,12 +418,12 @@ if N == 10 and continuing:
             % len(test)
         )
 
-#test = [i for i in test if i[names.index("T")] == T]
+# test = [i for i in test if i[names.index("T")] == T]
 test = [i for i in test if i[15] == N]
 
 
 # wipes results file
-#if T == 2 and not continuing:
+# if T == 2 and not continuing:
 if N == 10 and not continuing:
     open(count_file, "w").close()
     open(results_file, "w").close()
