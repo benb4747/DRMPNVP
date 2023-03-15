@@ -3,6 +3,51 @@ from .demand_RV import *
 from scipy.stats import norm, chi2
 import itertools as it
 import time
+from numba import njit
+
+
+@njit
+def reduce_njit(AS_conf, sigs_t, red):
+    y = AS_conf[0]
+    n = len(y)
+    T = int(len(y) / 2)
+    c = 0
+    for k in range(AS_conf.shape[0]):
+        x = AS_conf[k]
+        dom = False
+        for t in range(T):
+            if x[T + t] != max(sigs_t[t]):
+                j = 0
+                while sigs_t[t, j] != x[T + t]:
+                    j += 1
+                j1 = j
+                while sigs_t[t, j] != 0:
+                    j += 1
+                j2 = j
+                for i in sigs_t[t, j1 + 1 : j2]:
+                    x_ = np.zeros(n)
+                    for k in range(2 * T):
+                        x_[k] = x[k]
+                    x_[T + t] = i
+                    for e in range(AS_conf.shape[0]):
+                        same = True
+                        for f in range(AS_conf.shape[1]):
+                            if AS_conf[e, f] != x_[f]:
+                                same = False
+                                break
+                        if same:
+                            dom = True
+                            break
+                    if dom:
+                        break
+
+            if dom:
+                break
+
+        if not dom:
+            red[c] = x
+            c += 1
+    return red[:c]
 
 
 class ambiguity_set:
@@ -19,7 +64,7 @@ class ambiguity_set:
         if self.demand.dist in ["normal", "Normal"]:
             start = time.perf_counter()
             omega_0 = self.demand.omega_0
-            #z = norm.ppf(1 - self.alpha / 2)
+            # z = norm.ppf(1 - self.alpha / 2)
             z = np.sqrt(chi2.ppf(q=1 - self.alpha, df=2 * self.demand.T))
             N = self.demand.N
             omega_hat = self.demand.mle
@@ -66,14 +111,14 @@ class ambiguity_set:
         elif self.demand.dist in ["Poisson", "poisson"]:
             start = time.perf_counter()
             lam_0 = self.demand.omega_0
-            #z = norm.ppf(1 - self.alpha / 2)
+            # z = norm.ppf(1 - self.alpha / 2)
             z = np.sqrt(chi2.ppf(q=1 - self.alpha, df=self.demand.T))
             N = self.demand.N
             lam_hat = self.demand.mle
             CIs = [
                 (
                     lam_hat[t] - z * np.sqrt(lam_hat[t] / N),
-                    lam_hat[t] + z * np.sqrt(lam_hat[t] / N)
+                    lam_hat[t] + z * np.sqrt(lam_hat[t] / N),
                 )
                 for t in range(self.demand.T)
             ]
@@ -154,7 +199,7 @@ class ambiguity_set:
             )
             ASR = []
             for o in not_dominated:
-                if time.perf_counter() - start < left: 
+                if time.perf_counter() - start < left:
                     ASR.append(o)
                 else:
                     self.reduced = "T.O."
@@ -167,11 +212,38 @@ class ambiguity_set:
             # not sure how this will work yet
             self.reduced = self.confidence_set_full
 
+    def reduce_fast(self):
+        if self.demand.dist in ["Normal", "normal"]:
+            left = self.timeout - self.time_taken
+            start = time.perf_counter()
+            AS_conf = self.confidence_set_full.copy()
+            AS_conf_ = np.array([tuple(np.array(x).flatten()) for x in AS_conf])
+            sigs = list(set([o[1] for o in AS_conf]))
+            sigs = [list(o) for o in sigs]
+            sigs_t = [list(set([o[t] for o in sigs])) for t in range(self.demand.T)]
+            sigs_t = [list(sigs_t[t]) for t in range(self.demand.T)]
+            sigs_t = [sorted(x) for x in sigs_t]
+            ml = max([len(sigs_t[t]) for t in range(self.demand.T)])
+            sigs_t_ = np.zeros((self.demand.T, ml), dtype="float64")
+            for t in range(self.demand.T):
+                sigs_t_[t, : len(sigs_t[t])] = sigs_t[t]
+
+            red_ = -1 * np.ones(AS_conf_.shape, dtype="float64")
+            red = reduce_njit(AS_conf_, sigs_t_, red_)
+            ASR = [
+                (tuple(x[: int(len(x) / 2)]), tuple(x[int(len(x) / 2) :])) for x in red
+            ]
+            end = time.perf_counter()
+            self.time_taken += end - start
+            self.reduced = ASR
+
+        elif self.demand.dist in ["Poisson", "poisson"]:
+            # not sure how this will work yet
+            self.reduced = self.confidence_set_full
+
     def compute_extreme_distributions(self):
         start = time.perf_counter()
         left = self.timeout - self.time_taken
-        if self.reduced == None:
-            self.reduce()
         if self.demand.dist in ["normal", "Normal"]:
             M = []
             T = len(self.confidence_set_full[0][0])
