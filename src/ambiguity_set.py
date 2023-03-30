@@ -148,12 +148,9 @@ class ambiguity_set:
                 chi = chi2.ppf(q=1 - self.alpha, df=2 * self.demand.T)
                 confset = []
                 for omega in self.base_set:
-                    if (
-                        norm_conf_val(
-                            self.demand.N, self.demand.T, omega, self.demand.mle
-                        )
-                        <= chi
-                    ):
+                    if (min(omega[1]) > 0) and norm_conf_val(
+                        self.demand.N, self.demand.T, omega, self.demand.mle
+                    ) <= chi:
                         confset.append(omega)
                     tt = time.perf_counter() - start
                     if tt > left:
@@ -245,6 +242,9 @@ class ambiguity_set:
         start = time.perf_counter()
         left = self.timeout - self.time_taken
         if self.demand.dist in ["normal", "Normal"]:
+            if self.confidence_set_full == "T.O.":
+                self.extreme_distributions = "T.O."
+                return "T.O."
             M = []
             T = len(self.confidence_set_full[0][0])
             for o in self.confidence_set_full:
