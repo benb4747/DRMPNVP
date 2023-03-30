@@ -198,40 +198,77 @@ class DRMPNVP:
                 name="alpha",
                 lb=-GRB.INFINITY,
             )
-
-            alpha_min = np.array(
-                [
+            if self.T < 10:
+                alpha_min = np.array(
                     [
-                        sum([mu[k] - (self.W / self.w[k]) for k in range(t + 1)])
-                        / np.sqrt(sum([sig[k] ** 2 for k in range(t + 1)]))
+                        [
+                            sum([mu[k] - (self.W / self.w[k]) for k in range(t + 1)])
+                            / np.sqrt(sum([sig[k] ** 2 for k in range(t + 1)]))
+                            for t in range(self.T)
+                        ]
+                        for (mu, sig) in ambiguity_set
+                    ]
+                )
+                alpha_max = np.array(
+                    [
+                        [
+                            sum([mu[k] for k in range(t + 1)])
+                            / np.sqrt(sum([sig[k] ** 2 for k in range(t + 1)]))
+                            for t in range(self.T)
+                        ]
+                        for (mu, sig) in ambiguity_set
+                    ]
+                )
+                alpha_pts = np.array(
+                    [
+                        [
+                            np.arange(
+                                np.floor(alpha_min[i, t]),
+                                np.ceil(alpha_max[i, t]) + self.gap,
+                                self.gap,
+                            )
+                            for t in range(self.T)
+                        ]
+                        for i in range(alpha_min.shape[0])
+                    ]
+                )
+            else:
+                alpha_min = np.array(
+                    [
+                        min(
+                            [
+                                sum(
+                                    [mu[k] - (self.W / self.w[k]) for k in range(t + 1)]
+                                )
+                                / np.sqrt(sum([sig[k] ** 2 for k in range(t + 1)]))
+                                for (mu, sig) in ambiguity_set
+                            ]
+                        )
                         for t in range(self.T)
                     ]
-                    for (mu, sig) in ambiguity_set
-                ]
-            )
-            alpha_max = np.array(
-                [
+                )
+                alpha_max = np.array(
                     [
-                        sum([mu[k] for k in range(t + 1)])
-                        / np.sqrt(sum([sig[k] ** 2 for k in range(t + 1)]))
+                        max(
+                            [
+                                sum([mu[k] for k in range(t + 1)])
+                                / np.sqrt(sum([sig[k] ** 2 for k in range(t + 1)]))
+                                for (mu, sig) in ambiguity_set
+                            ]
+                        )
                         for t in range(self.T)
                     ]
-                    for (mu, sig) in ambiguity_set
-                ]
-            )
-            alpha_pts = np.array(
-                [
+                )
+                alpha_pts = np.array(
                     [
                         np.arange(
-                            np.floor(alpha_min[i, t]),
-                            np.ceil(alpha_max[i, t]) + self.gap,
+                            np.floor(alpha_min[t]),
+                            np.ceil(alpha_max[t]) + self.gap,
                             self.gap,
                         )
                         for t in range(self.T)
                     ]
-                    for i in range(alpha_min.shape[0])
-                ]
-            )
+                )
 
             for i in range(len(ambiguity_set)):
                 tt = time.perf_counter() - start
@@ -241,7 +278,10 @@ class DRMPNVP:
                     var = [q, alpha, dummy, NL_part]
                     t_build = time.perf_counter() - start
                     return [m, var, tt, TO]
-
+                if self.T < 10:
+                    ap = [alpha_pts[i, t] for t in range(self.T)]
+                else:
+                    ap = [alpha_pts[t] for t in range(self.T)]
                 mu, sig = ambiguity_set[i]
                 s = [
                     np.sqrt(np.sum([sig[k] ** 2 for k in range(t + 1)]))
@@ -249,13 +289,12 @@ class DRMPNVP:
                 ]
                 for t in range(self.T):
                     NL_pts = [
-                        self.nonlinear_part((mu, sig), alpha, t)
-                        for alpha in alpha_pts[i, t]
+                        self.nonlinear_part((mu, sig), alpha, t) for alpha in ap[t]
                     ]
                     m.addGenConstrPWL(
                         alpha[i, t],
                         NL_part[i, t],
-                        alpha_pts[i, t],
+                        ap[t],
                         NL_pts,
                         "NLconstr_(%s,%s)" % (i, t),
                     )
@@ -498,7 +537,6 @@ class DRMPNVP:
         k = 0
         reason = ""
         while k < k_max:
-            print(len(Omega_k))
             # solve master problem
             tt = time.perf_counter() - s
             [m, var, t_build, TO] = self.build_model(Omega_k)
@@ -599,13 +637,17 @@ class DRMPNVP:
                 for t in range(self.T)
             )
         )
-
+        left = self.timeout - (time.perf_counter() - start)
+        m.Params.TimeLimit = left
         m.optimize()
-        q_sol = np.array((m.getAttr("x", q).values()))
-
-        return q_sol, m.ObjVal
+        if m.Status in [GRB.OPTIMAL, GRB.TIME_LIMIT] and m.solCount > 0:
+            q_sol = np.array((m.getAttr("x", q).values()))
+            return q_sol, m.ObjVal
+        else:
+            return tuple(self.T * [-1]), -1
 
     def SAA(self, N, seed, omega):
+        s = time.perf_counter()
         if self.dist == "normal" or self.dist == "Normal":
             mu, sig = omega
             Sig = np.zeros((self.T, self.T))
@@ -659,9 +701,13 @@ class DRMPNVP:
         )
 
         m.addConstr(gp.quicksum(self.w[t] * q[t] for t in range(self.T)) <= self.W)
-
+        left = self.timeout - (time.perf_counter() - s)
+        m.Params.TimeLimit = left
         m.optimize()
+        if m.Status in [GRB.OPTIMAL, GRB.TIME_LIMIT] and m.solCount > 0:
 
-        q_sol = np.array((m.getAttr("x", q).values()))
+            q_sol = np.array((m.getAttr("x", q).values()))
 
-        return q_sol, m.ObjVal
+            return q_sol, m.ObjVal
+        else:
+            return tuple(self.T * [-1]), -1
