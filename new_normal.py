@@ -6,9 +6,6 @@ from src.DRMPNVP import *
 from src.MPNVP import *
 
 import numpy as np
-from decimal import Decimal, getcontext
-from scipy.stats import norm, poisson
-from math import log, exp
 
 
 def test_algorithms(inp):
@@ -52,7 +49,6 @@ def test_algorithms(inp):
         N,
         alpha,
     ]
-
     dist = "normal"
     omega_0 = (mu_0, sig_0)
     # construct MLEs and confidence set
@@ -66,65 +62,44 @@ def test_algorithms(inp):
             return
     AS = ambiguity_set(X, "confidence_set", alpha, n_pts, timeout)
     s = time.perf_counter()
+    ME = False
     try:
         AS.construct_base_set()
     except MemoryError:
-        AS.base_set = "T.O."
-        for f in [count_file, results_file]:
-            with open(f, "a") as myfile:
-                myfile.write(
-                    "Input %s had MemoryError while constructing base AS. \n" % index
-                )
-            return
+        ME = True
+        AS.base_set = []
+        AS.reduced = []
+        AS.confidence_set_full = []
+        AS.extreme_distributions = []
+
     e = time.perf_counter()
     t_base = np.round(e - s, 5)
+    if not ME:
+        s = time.perf_counter()
+        AS.construct_confidence_set()
+        e = time.perf_counter()
+        t_conf = np.round(e - s, 5)
+        AS.reduced = AS.confidence_set_full
+        s = time.perf_counter()
+        AS.compute_extreme_distributions()
+        e = time.perf_counter()
+        t_ext = np.round(e - s, 5)
 
-    if AS.base_set == "T.O.":
-        for f in [count_file, results_file]:
-            with open(f, "a") as myfile:
+        num_dists = len(AS.reduced)
+        if num_dists <= 1:
+            with open(count_file, "a") as myfile:
                 myfile.write(
-                    "Input %s timed out while constructing base AS. \n" % index
-                )
-            return
-    s = time.perf_counter()
-    AS.construct_confidence_set()
-    e = time.perf_counter()
-    t_conf = np.round(e - s, 5)
-    if AS.confidence_set_full == "T.O.":
-        for f in [count_file, results_file]:
-            with open(f, "a") as myfile:
-                myfile.write(
-                    "Input %s timed out while constructing confidence set. \n" % index
-                )
-            return
-    #     AS.reduce()
-    #     if AS.reduced == "T.O.":
-    #         for f in [count_file, results_file]:
-    #             with open(f, "a") as myfile:
-    #                 myfile.write("Input %s timed out while reducing set. \n" % index)
-    #             return
-    AS.reduced = AS.confidence_set_full
-    s = time.perf_counter()
-    AS.compute_extreme_distributions()
-    e = time.perf_counter()
-    t_ext = np.round(e - s, 5)
-    if AS.extreme_distributions == "T.O.":
-        for f in [count_file, results_file]:
-            with open(f, "a") as myfile:
-                myfile.write(
-                    "Input %s timed out while constructing extreme set. \n" % index
+                    "Input %s only had %s distribution. Skipping! \n"
+                    % (index, num_dists)
                 )
             return
 
-    num_dists = len(AS.reduced)
-    if num_dists <= 1:
-        with open(count_file, "a") as myfile:
-            myfile.write(
-                "Input %s only had %s distribution. Skipping! \n" % (index, num_dists)
-            )
-        return
+        t_AS = np.round(t_base + t_conf + t_ext, 5)
+    else:
+        t_conf = 0
+        t_ext = 0
+        t_AS = t_base
 
-    t_AS = np.round(t_base + t_conf + t_ext, 5)
     headers += [
         len(AS.confidence_set_full),
         len(AS.reduced),
@@ -134,33 +109,57 @@ def test_algorithms(inp):
         t_AS,
     ]
     DRO_problem = DRMPNVP(T, W, w, p, h, b, PWL_gap, timeout, solver_cores, dist, AS)
-
-    PWL_sol = DRO_problem.PWL_solve(AS.reduced)
-    PWL_q, PWL_obj, PWL_worst, PWL_tt, PWL_TO = PWL_sol
-    if PWL_q[0] != -1:
-        PWL_obj = DRO_problem.cost_function(PWL_q, PWL_worst)
-        PWL_true_worst, PWL_true_worst_obj = DRO_problem.DSP(PWL_q, N, X.mle)
-        PWL_true_obj = np.round(DRO_problem.cost_function(PWL_q, omega_0), 5)
-        PWL_tt = PWL_tt + t_AS - t_ext
+    if not ME and type(AS.confidence_set_full) == list:
+        DRO_problem.timeout = max(timeout - t_base - t_conf, 0)
+        PWL_sol = DRO_problem.PWL_solve(AS.reduced)
+        PWL_q, PWL_obj, PWL_worst, PWL_tt, PWL_TO = PWL_sol
+        if PWL_q[0] != -1:
+            PWL_obj = DRO_problem.cost_function(PWL_q, PWL_worst)
+            PWL_true_worst, PWL_true_worst_obj = DRO_problem.DSP(PWL_q, N, X.mle)
+            PWL_true_obj = np.round(DRO_problem.cost_function(PWL_q, omega_0), 5)
     else:
+        PWL_q = tuple(T * [-1])
+        PWL_worst = (PWL_q, PWL_q)
+        if ME:
+            PWL_TO = 2
+        else:
+            PWL_TO = 1
+        PWL_tt = 0
+    if PWL_q[0] == -1:
         PWL_obj = -1
         PWL_true_worst = PWL_worst
         PWL_true_worst_obj = -1
         PWL_true_obj = -1
+        PWL_tt = 0
+    PWL_tt = np.round(PWL_tt + t_AS - t_ext, 5)
 
-    CS_sol = DRO_problem.CS_solve(AS.reduced[0])
-    CS_q, CS_worst, CS_obj, CS_tt, CS_TO, CS_reason = CS_sol
-    if CS_q[0] != -1:
-        CS_obj = DRO_problem.cost_function(CS_q, CS_worst)
-        CS_true_worst, CS_true_worst_obj = DRO_problem.DSP(CS_q, N, X.mle)
-        CS_true_obj = np.round(DRO_problem.cost_function(CS_q, omega_0), 5)
-        CS_tt = np.round(CS_tt + t_AS, 5)
+    if not ME and type(AS.extreme_distributions) != str:
+        DRO_problem.timeout = timeout - t_AS
+        CS_sol = DRO_problem.CS_solve(AS.reduced[0])
+        CS_q, CS_worst, CS_obj, CS_tt, CS_TO, CS_reason = CS_sol
+        if CS_q[0] != -1:
+            CS_obj = DRO_problem.cost_function(CS_q, CS_worst)
+            CS_true_worst, CS_true_worst_obj = DRO_problem.DSP(CS_q, N, X.mle)
+            CS_true_obj = np.round(DRO_problem.cost_function(CS_q, omega_0), 5)
     else:
+        CS_q = tuple(T * [-1])
+        CS_worst = (CS_q, CS_q)
+        CS_tt = 0
+        if ME:
+            CS_TO = 2
+            CS_reason = "ME"
+        else:
+            CS_TO = 1
+            CS_reason = "TO"
+        CS_tt = 0
+    if CS_q[0] == -1:
         CS_obj = -1
         CS_true_worst = CS_worst
         CS_true_worst_obj = -1
         CS_true_obj = -1
+    CS_tt = np.round(CS_tt + t_AS, 5)
 
+    DRO_problem.timeout = timeout
     CSO_sol = DRO_problem.CS_solve(
         omega_0, MLE=X.mle, N=N, discrete=False, verbose=False, eps=1e-6
     )
@@ -175,7 +174,7 @@ def test_algorithms(inp):
         CSO_true_worst_obj = -1
         CSO_true_obj = -1
 
-    CS_reasons = ["TO", "repeat", "optimal", "k"]
+    CS_reasons = ["TO", "repeat", "optimal", "k", "ME"]
     CS_reason = CS_reasons.index(CS_reason)
     CSO_reason = CS_reasons.index(CSO_reason)
 
@@ -245,7 +244,7 @@ def test_algorithms(inp):
         np.round(PWL_obj, 5),
         tuple([tuple(i) for i in np.round(PWL_true_worst, 3)]),
         np.round(PWL_true_worst_obj, 5),
-        PWL_tt,
+        np.round(PWL_tt, 5),
         int(PWL_TO),
         PWL_true_obj,
         tuple(np.round(CS_q, 3)),
@@ -253,7 +252,7 @@ def test_algorithms(inp):
         np.round(CS_obj, 5),
         tuple([tuple(i) for i in np.round(CS_true_worst, 3)]),
         np.round(CS_true_worst_obj, 5),
-        CS_tt,
+        np.round(CS_tt, 5),
         int(CS_TO),
         CS_reason,
         CS_true_obj,
@@ -262,23 +261,23 @@ def test_algorithms(inp):
         np.round(CSO_obj, 5),
         tuple([tuple(i) for i in np.round(CSO_true_worst, 3)]),
         np.round(CSO_true_worst_obj, 5),
-        CSO_tt,
+        np.round(CSO_tt, 5),
         int(CSO_TO),
         CSO_reason,
         CSO_true_obj,
         tuple(np.round(MLE_q, 3)),
         tuple([tuple(i) for i in np.round(X.mle, 3)]),
         np.round(MLE_obj, 5),
-        MLE_tt,
+        np.round(MLE_tt, 5),
         MLE_true_obj,
         tuple(np.round(mb_q, 3)),
         np.round(mb_obj, 5),
-        mb_tt,
+        np.round(mb_tt, 5),
         mb_true_obj,
         tuple(np.round(saa_q, 3)),
         np.round(saa_obj, 5),
         saa_true_obj,
-        saa_tt,
+        np.round(saa_tt, 5),
         MLE_neg,
         np.round(omega0_obj, 5),
         tuple(np.round(omega0_q, 3)),
@@ -299,16 +298,16 @@ def test_algorithms_mp(inp):
     try:
         return test_algorithms(inp)
     except Exception:
-        with open(results_file, "a") as res_file:
+        with open(count_file, "a") as res_file:
             res_file.write("Input %s failed on replication %s.\n" % (ind, rep))
         logging.exception("Input %s failed on replication %s.\n" % (ind, rep))
 
 
 # T = int(sys.argv[1]) + 1
-num_processors = 20
+num_processors = 32
 gurobi_cores = 4
 loop_cores = int(num_processors / gurobi_cores)
-timeout = 4 * 60 * 60
+timeout = 8 * 60 * 60
 
 T_vals = list(range(2, 5)) + [10]
 # mu_0_range = range(3, 40)
@@ -318,47 +317,31 @@ sig_0_range = range(1, 11)
 num_omega0 = 3
 
 PWL_gap_vals = list(reversed([0.1, 0.25, 0.5]))
-disc_pts_vals = [3, 5, 10]
+disc_pts_vals = [3, 5, 8]
 # M = disc_pts_vals[int(sys.argv[1]) - 1]
 p_range = list(100 * np.array(range(1, 3)))
 h_range = list(100 * np.array(range(1, 3)))
 b_range = list(100 * np.array(range(1, 3)))
-W_range = [4000, 4000, 8000, 20000]
+W_range = [6000, 9000, 9000, 30000]
 N_vals = [10, 25, 50]
 
 gap = PWL_gap_vals[int(sys.argv[1]) - 1]
-
-omega0_all = [
-    [
-        (m, s)
-        for (m, s) in mu_sig_combos(mu_0_range, sig_0_range, T_)
-        if np.all(np.array([s[t] <= m[t] / 3 for t in range(T_)]))
-    ]
-    for T_ in T_vals
-    if T_ < 10
-]
 
 # omega0_all = [mu_sig_combos(mu_0_range, sig_0_range, T_) for T_ in T_vals]
 
 omega0_vals = []
 for T_ in T_vals:
-    if T_ < 10:
-        np.random.seed(T_vals.index(T_))
-        indices = np.random.choice(range(len(omega0_all[T_vals.index(T_)])), num_omega0)
-        omega0_vals.append([omega0_all[T_vals.index(T_)][i] for i in indices])
-    else:
-        mu0_ = range(9, 21)
-        lol = []
-        for n in range(num_omega0):
-            np.random.seed(T_vals.index(T_) * n)
-            mu0 = np.random.choice(mu0_, T_)
-            sig0 = []
-            for t in range(T_):
-                np.random.seed(T_vals.index(T_) * n * t)
-                sig0.append(np.random.choice(range(1, int(mu0[t] / 3))))
-            lol.append((tuple(mu0), tuple(sig0)))
-        omega0_vals = omega0_vals + [lol]
-
+    mu0_ = range(9, 31)
+    lol = []
+    for n in range(num_omega0):
+        np.random.seed((T_vals.index(T_) + 1) * n)
+        mu0 = np.random.choice(mu0_, T_)
+        sig0 = []
+        for t in range(T_):
+            np.random.seed((T_vals.index(T_) + 1) * n + 2023 * t)
+            sig0.append(np.random.choice(range(2, int(np.ceil(mu0[t] / 2)) + 1)))
+        lol.append((tuple(mu0), tuple(sig0)))
+    omega0_vals = omega0_vals + [lol]
 
 inputs = [
     (
@@ -466,14 +449,14 @@ names = [
     "omega0_tt",
 ]
 
-results_file = "results_normal_new_%s.txt" % int(sys.argv[1])
-count_file = "count_normal_new.txt"
+results_file = "res%s.txt" % int(sys.argv[1])
+count_file = "x_count.txt"
 test_full = inputs
 
-res_all = "normal_new.txt"
+res_all = "x_res.txt"
 
-continuing = False
-just10 = True
+continuing = True
+just10 = False
 
 if continuing:
     file1 = open(res_all, "r")
@@ -485,8 +468,13 @@ if continuing:
     for line in lines:
         line = line.rstrip("\n")
         if "failed" in line:
-            i = eval(line[line.index(" ") + 1 : line.index("f") - 1])
-            r = eval(line[line.index(".") - 2 : line.index(".")])
+            s = line
+            i = [int(s) for s in s.split() if s.isdigit()][0]
+            failed.append((i, 0))
+        elif "MemoryError" in line:
+            s = line
+            i = [int(s) for s in s.split() if s.isdigit()][0]
+            r = 0
             failed.append((i, r))
         else:
             if type(eval(line)[0]) == str:
@@ -502,7 +490,6 @@ if continuing:
     file1.close()
 
     timed_out = []
-    failed = []
     for line in lines:
         line = line.rstrip("\n")
         if "negative" in line:
@@ -513,7 +500,7 @@ if continuing:
             i = [int(i) for i in line.split() if i.isdigit()][0]
             timed_out.append((i, 0))
 
-    done = list(zip(df.ind, df.rep)) + failed + timed_out
+    done = list(zip(df.ind, df.rep)) + timed_out + failed
 
     not_done = [i for i in test_full if (i[0], i[1]) not in done]
 
@@ -530,8 +517,6 @@ if int(sys.argv[1]) == 1 and continuing:
         )
 
 test_ = [i for i in test if i[names.index("PWL_gap")] == gap]
-if just10:
-    test_ = [i for i in test_ if i[names.index("T")] == 10]
 
 # wipes results file
 # if T == 2 and not continuing:
@@ -543,9 +528,8 @@ if int(sys.argv[1]) == 1 and not continuing:
             "About to start solving %s instances with the repeated sampling approach. \n"
             % len(test)
         )
-    if not just10:
-        with open(results_file, "a") as myfile:
-            myfile.write(str(names) + "\n")
+    with open(res_all, "w") as myfile:
+        myfile.write(str(names) + "\n")
 
 # res = [test_algorithms(inp) for inp in test]
 
